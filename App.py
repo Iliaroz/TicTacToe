@@ -21,6 +21,7 @@ class VideoMode(Enum):
     Board = 1
     Original = 2
     Markers = 3
+    Detections = 4
 
     
 class VideoThread(QtCore.QThread):
@@ -35,6 +36,7 @@ class VideoThread(QtCore.QThread):
         self.height = 480
         self.mode = VideoMode.Original
         self.markers_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+        self.boardMarkers = np.empty((4,2))
         self.image_original = {}
         self.image_original['available'] = False
         self.image_original['frame'] = self.generateImage("No video")
@@ -43,7 +45,10 @@ class VideoThread(QtCore.QThread):
         self.image_board['frame'] = self.generateImage("No board detected")
         self.image_markers = {}
         self.image_markers['available'] = False
-        self.image_markers['frame'] = self.generateImage("No board detected")
+        self.image_markers['frame'] = self.generateImage("No markers detected")
+        self.image_detections = {}
+        self.image_detections['available'] = False
+        self.image_detections['frame'] = self.generateImage("No cups detected")
         
 
     def run(self):
@@ -53,39 +58,39 @@ class VideoThread(QtCore.QThread):
         self.camera = cv2.VideoCapture(self.videoPort)
         flag_disconnect = False
         while self._run_flag:
+            image_show = self.generateImage("No video device")
             if ((self.camera is None) or (not self.camera.isOpened()) or flag_disconnect == True):
                 print ('Warning: unable to open video source: ', self.videoPort)
                 try:
                     self.camera.release()
                 except: pass
                 del(self.camera)
-                time.sleep(8)
+                time.sleep(5)
                 self.camera = cv2.VideoCapture(self.videoPort)
                 flag_disconnect = False
             else:
-                image_show = self.generateImage("No video device")
                 ret, image_camera = self.camera.read()
                 if ret:
                     if self.isImageEmpty(image_camera):
                         print("Empty image!!!!!!!!!!!!!!!")
                         flag_disconnect = True
-                    else:
-                        self.ParseVideoFrame(image_camera)
-                        image_show = self.getVideoFrameToShow()
                 else:
                     flag_disconnect = True
-                self.change_pixmap_signal.emit(image_show)
+                self.ParseVideoFrame(ret, image_camera)
+                image_show = self.getVideoFrameToShow()
+            self.change_pixmap_signal.emit(image_show)
         # shut down capture system
         self.camera.release()
         ### end of thread
         
     def getVideoFrameToShow(self):
-        image_show = self.generateImage("No video")
         image_show = self.image_original['frame']
         if (self.mode == VideoMode.Board):
-            image_show = self.generateImage("No board detected")
+            image_show = self.image_board['frame']
         elif (self.mode == VideoMode.Markers):
-            image_show = self.generateImage("No markers")
+            image_show = self.image_markers['frame']
+        elif (self.mode == VideoMode.Detections):
+            image_show = self.image_detections['frame']
         
         return image_show
         
@@ -96,31 +101,42 @@ class VideoThread(QtCore.QThread):
         res = (image[:,:] == pixel).all()
         return res
         
-    def ParseVideoFrame(self, camera_image):
-        cv2.imshow('Original', camera_image)
+    def ParseVideoFrame(self, retrived, camera_image):
+        if not retrived:
+            self.image_original['frame'] = self.generateImage("No video")
+            self.image_board['frame'] = self.generateImage("No video board")
+            self.image_markers['frame'] = self.generateImage("No video markers")
+            self.image_detections['frame'] = self.generateImage("No video detection")
+            return
+        
+        # cv2.imshow('Original', camera_image)
         self.image_original['frame'] = camera_image
         corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(camera_image, self.markers_dictionary) #detection
         img_marked = cv2.aruco.drawDetectedMarkers(camera_image.copy(), corners, ids)   #Overlay detection results
-        cv2.imshow('Marked', img_marked)
+        # cv2.imshow('Marked', img_marked)
+        self.image_markers['frame'] = img_marked
         
+        markers_number = len(corners)
         #Store the "center coordinates" of the marker in m in order from the upper left in the clockwise direction.
-        marks = m = np.empty((4,2))
+        m = np.empty((4,2))
         try:
             for i,c in zip(ids.ravel(), corners):
-                    m[i] = c[0].mean(axis=0)
+                m[i] = c[0][0] # board only ### c[0].mean(axis=0) # center of markers
         except:
             pass
-        finally:
-            marks = m
+        if markers_number == 4:
+            self.boardMarkers = m
+        
         
         width = height = min(self.width, self.height) #Image size after transformation
         
-        marker_coordinates = np.float32(marks)
+        marker_coordinates = np.float32(self.boardMarkers)
         true_coordinates   = np.float32([[0,0],[width,0],[width,height],[0,height]])
         try:
             trans_mat = cv2.getPerspectiveTransform(marker_coordinates,true_coordinates)
             img_trans = cv2.warpPerspective(camera_image,trans_mat,(width, height))
-            cv2.imshow('Converted', img_trans)
+            # cv2.imshow('Converted', img_trans)
+            self.image_board['frame'] = img_trans
         except:
             pass
         pass
