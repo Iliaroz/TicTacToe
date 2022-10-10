@@ -6,10 +6,9 @@ Created on Wed Oct  5 10:02:55 2022
 """
 
 from PyQt6 import QtGui, QtWidgets, QtGui, QtCore, uic
-import sys
+import sys, os, time
 import cv2
 import numpy as np
-import os
 from enum import Enum
 
 ###########################################################
@@ -21,8 +20,8 @@ from enum import Enum
 class VideoMode(Enum):
     Board = 1
     Original = 2
-    Calibration = 3
-    Detection = 4
+    Markers = 3
+
     
 class VideoThread(QtCore.QThread):
     change_pixmap_signal = QtCore.pyqtSignal(np.ndarray)
@@ -32,28 +31,99 @@ class VideoThread(QtCore.QThread):
         super().__init__()
         self.videoPort = videoPort
         self._run_flag = True
-        self.width = 320
-        self.height = 240
+        self.width = 640
+        self.height = 480
         self.mode = VideoMode.Original
+        self.markers_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+        self.image_original = {}
+        self.image_original['available'] = False
+        self.image_original['frame'] = self.generateImage("No video")
+        self.image_board = {}
+        self.image_board['available'] = False
+        self.image_board['frame'] = self.generateImage("No board detected")
+        self.image_markers = {}
+        self.image_markers['available'] = False
+        self.image_markers['frame'] = self.generateImage("No board detected")
+        
 
     def run(self):
+        image_show = self.generateImage("Connecting...")
+        self.change_pixmap_signal.emit(image_show)
         # capture from web cam
-        cap = cv2.VideoCapture(self.videoPort)
+        self.camera = cv2.VideoCapture(self.videoPort)
+        flag_disconnect = False
         while self._run_flag:
-            image_show = self.generateImage("No video")
-            ret, image_original = cap.read()
-            if ret:
-                image_show = image_original
-                if (self.mode == VideoMode.Board):
-                    image_show = self.generateImage("No board detected")
-                elif (self.mode == VideoMode.Calibration):
-                    image_show = self.generateImage("No calibration")
-                elif (self.mode == VideoMode.Detection):
-                    image_show = self.generateImage("No detection")
-                    
-            self.change_pixmap_signal.emit(image_show)
+            if ((self.camera is None) or (not self.camera.isOpened()) or flag_disconnect == True):
+                print ('Warning: unable to open video source: ', self.videoPort)
+                try:
+                    self.camera.release()
+                except: pass
+                del(self.camera)
+                time.sleep(8)
+                self.camera = cv2.VideoCapture(self.videoPort)
+                flag_disconnect = False
+            else:
+                image_show = self.generateImage("No video device")
+                ret, image_camera = self.camera.read()
+                if ret:
+                    if self.isImageEmpty(image_camera):
+                        print("Empty image!!!!!!!!!!!!!!!")
+                        flag_disconnect = True
+                    else:
+                        self.ParseVideoFrame(image_camera)
+                        image_show = self.getVideoFrameToShow()
+                else:
+                    flag_disconnect = True
+                self.change_pixmap_signal.emit(image_show)
         # shut down capture system
-        cap.release()
+        self.camera.release()
+        ### end of thread
+        
+    def getVideoFrameToShow(self):
+        image_show = self.generateImage("No video")
+        image_show = self.image_original['frame']
+        if (self.mode == VideoMode.Board):
+            image_show = self.generateImage("No board detected")
+        elif (self.mode == VideoMode.Markers):
+            image_show = self.generateImage("No markers")
+        
+        return image_show
+        
+    def isImageEmpty(self, image):
+        """Check all image pixels are equal, that means, probably, it's fake image"""
+        
+        pixel= image[0, 0]
+        res = (image[:,:] == pixel).all()
+        return res
+        
+    def ParseVideoFrame(self, camera_image):
+        cv2.imshow('Original', camera_image)
+        self.image_original['frame'] = camera_image
+        corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(camera_image, self.markers_dictionary) #detection
+        img_marked = cv2.aruco.drawDetectedMarkers(camera_image.copy(), corners, ids)   #Overlay detection results
+        cv2.imshow('Marked', img_marked)
+        
+        #Store the "center coordinates" of the marker in m in order from the upper left in the clockwise direction.
+        marks = m = np.empty((4,2))
+        try:
+            for i,c in zip(ids.ravel(), corners):
+                    m[i] = c[0].mean(axis=0)
+        except:
+            pass
+        finally:
+            marks = m
+        
+        width = height = min(self.width, self.height) #Image size after transformation
+        
+        marker_coordinates = np.float32(marks)
+        true_coordinates   = np.float32([[0,0],[width,0],[width,height],[0,height]])
+        try:
+            trans_mat = cv2.getPerspectiveTransform(marker_coordinates,true_coordinates)
+            img_trans = cv2.warpPerspective(camera_image,trans_mat,(width, height))
+            cv2.imshow('Converted', img_trans)
+        except:
+            pass
+        pass
 
     def generateImage(self, text):
         blank_image = np.zeros((self.height, self.width,3), np.uint8)
