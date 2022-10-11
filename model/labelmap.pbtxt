@@ -1,0 +1,17 @@
+
+item { 
+  id: 1
+  name: 'blue'
+}
+item { 
+  id: 2
+  name: 'red'
+}
+item { 
+  id: 3
+  name: 'hand'
+}
+item { 
+  id: 4
+  name: 'dobot'
+}

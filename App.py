@@ -10,6 +10,13 @@ import sys, os, time
 import cv2
 import numpy as np
 from enum import Enum
+## model, detection
+import tensorflow as tf
+from object_detection.utils import label_map_util
+from object_detection.utils import config_util
+from object_detection.utils import visualization_utils
+from object_detection.builders import model_builder
+
 
 ###########################################################
 ###########################################################
@@ -25,18 +32,23 @@ class VideoMode(Enum):
 
     
 class VideoThread(QtCore.QThread):
-    change_pixmap_signal = QtCore.pyqtSignal(np.ndarray)
+    signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
+    signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     
 
-    def __init__(self, videoPort):
+    def __init__(self, videoPort, gameSize = 3):
         super().__init__()
         self.videoPort = videoPort
         self._run_flag = True
+        self.gameSize = gameSize
+        self.RedSign = -1
+        self.BlueSign = 1
         self.width = 640
         self.height = 480
         self.mode = VideoMode.Original
         self.markers_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.boardMarkers = np.empty((4,2))
+        ### output videos
         self.image_original = {}
         self.image_original['available'] = False
         self.image_original['frame'] = self.generateImage("No video")
@@ -50,10 +62,18 @@ class VideoThread(QtCore.QThread):
         self.image_detections['available'] = False
         self.image_detections['frame'] = self.generateImage("No cups detected")
         
+    ### -----------------------------------------
+    ### ----------  thread and gui   ------------
+    ### -----------------------------------------
+    
+    def setGameSize(self, size):
+        self.gameSize = size
 
     def run(self):
         image_show = self.generateImage("Connecting...")
-        self.change_pixmap_signal.emit(image_show)
+        self.signal_change_pixmap.emit(image_show)
+        ## load detection model...
+        self.initDetectionModel()
         # capture from web cam
         self.camera = cv2.VideoCapture(self.videoPort)
         flag_disconnect = False
@@ -78,11 +98,20 @@ class VideoThread(QtCore.QThread):
                     flag_disconnect = True
                 self.ParseVideoFrame(ret, image_camera)
                 image_show = self.getVideoFrameToShow()
-            self.change_pixmap_signal.emit(image_show)
+            self.signal_change_pixmap.emit(image_show)
         # shut down capture system
         self.camera.release()
         ### end of thread
         
+    def stop(self):
+        """Sets run flag to False and waits for thread to finish"""
+        self._run_flag = False
+        self.wait()
+
+    ### -----------------------------------------
+    ### ---------------  video   ----------------
+    ### -----------------------------------------
+    
     def getVideoFrameToShow(self):
         image_show = self.image_original['frame']
         if (self.mode == VideoMode.Board):
@@ -96,7 +125,6 @@ class VideoThread(QtCore.QThread):
         
     def isImageEmpty(self, image):
         """Check all image pixels are equal, that means, probably, it's fake image"""
-        
         pixel= image[0, 0]
         res = (image[:,:] == pixel).all()
         return res
@@ -139,8 +167,9 @@ class VideoThread(QtCore.QThread):
             self.image_board['frame'] = img_trans
         except:
             pass
+        self.CupsPositionDetection(img_trans, (self.gameSize, self.gameSize))
         pass
-
+    
     def generateImage(self, text):
         blank_image = np.zeros((self.height, self.width,3), np.uint8)
         blank_image[:,:] = (128,0,0)
@@ -160,10 +189,160 @@ class VideoThread(QtCore.QThread):
             lineType)
         return blank_image
 
-    def stop(self):
-        """Sets run flag to False and waits for thread to finish"""
-        self._run_flag = False
-        self.wait()
+    ### -----------------------------------------
+    ### ---------------  model   ----------------
+    ### -----------------------------------------
+    def initDetectionModel(self, ):
+        MODEL_DIR = '.' + '/model/'
+        
+        pipeline_config = MODEL_DIR + 'pipeline.config'
+        model_dir_test = MODEL_DIR + 'checkpoint/ckpt-0'
+        configs = config_util.get_configs_from_pipeline_file(pipeline_config)
+        model_config = configs['model']
+        detection_model = model_builder.build(
+                    model_config=model_config, is_training=False)
+        
+        ckpt = tf.compat.v2.train.Checkpoint(
+                    model=detection_model)
+        ckpt.restore(os.path.join(model_dir_test))
+        # load labelmap, map them to it's labels and load the detector
+
+        self.detect_fn = self.get_model_detection_function(detection_model)
+        
+        #map labels for inference decoding
+        label_map_path = MODEL_DIR + 'labelmap.pbtxt'
+        label_map = label_map_util.load_labelmap(label_map_path)
+        categories = label_map_util.convert_label_map_to_categories(
+                label_map,
+                max_num_classes=label_map_util.get_max_label_map_index(label_map),
+                use_display_name=True)
+        self.detect_category_index = label_map_util.create_category_index(categories)
+        self.detect_label_index = label_map_util.get_label_map_dict(label_map_path)
+        label_map_dict = label_map_util.get_label_map_dict(label_map, use_display_name=True)
+        
+
+    def CupsPositionDetection(self, board_image, board_shape):
+        FILL = 0.7
+        DETECTION_THRESHOLD = 0.7
+        def define_fit_boxes():
+            BX = []
+            H,W,_ = board_image.shape
+            R,C = board_shape
+            dH = int(H * FILL / R)
+            dW = int(W * FILL / C)
+            for r in range(C):
+                for c in range(R):
+                    x1 = int((r+0.5)*W/C - dW/2)
+                    x2 = int((r+0.5)*W/C + dW/2)
+                    y1 = int((c+0.5)*H/R - dH/2)
+                    y2 = int((c+0.5)*H/R + dH/2)
+                    BX.append(np.array([x1, y1, x2, y2]))
+            return BX
+            
+        def draw_game_boxes():
+            for box in game_fit_boxes:
+                cv2.rectangle(
+                    image_np_with_detections,
+                    (box[0], box[1]),
+                    (box[2], box[3]),
+                    (0,255,0), # color in BGR
+                    2, # thickness
+                    )
+        def draw_detected_boxes():
+            visualization_utils.visualize_boxes_and_labels_on_image_array(
+                        image_np_with_detections,
+                        detections['detection_boxes'][0].numpy(),
+                        (detections['detection_classes'][0].numpy() + label_id_offset).astype(int),
+                        detections['detection_scores'][0].numpy(),
+                        self.detect_category_index,
+                        use_normalized_coordinates=True,
+                        max_boxes_to_draw=20,
+                        min_score_thresh=DETECTION_THRESHOLD,
+                        agnostic_mode=False,
+                        skip_scores=True,
+            )
+        def draw_detected_centers():
+            boxes = detections['detection_boxes'][0].numpy()
+            center_points = []
+            for box in boxes:
+                cp = np.array( [np.mean(box[0:3:2]), np.mean(box[1:4:2])])
+                center_points.append(cp)
+            center_points = np.asarray(center_points)
+            visualization_utils.draw_keypoints_on_image_array(
+                        image_np_with_detections,
+                        center_points,
+                        keypoint_scores=detections['detection_scores'][0].numpy(),
+                        min_score_thresh=DETECTION_THRESHOLD,
+                        color='red',
+                        radius=self.height // 50 + 1,
+                        use_normalized_coordinates=True,
+                        keypoint_edges=None,
+                        keypoint_edge_color='green',
+                        keypoint_edge_width=2)
+            
+        def getDetectionCupsArray():
+            #TODO: nightmare code, rewrite normally
+            H,W,_ = board_image.shape
+            R,C = board_shape
+            newGB = np.zeros((R, C))
+            detBx = detections['detection_boxes'][0].numpy()
+            detCl = detections['detection_classes'][0].numpy()
+            detSc = detections['detection_scores'][0].numpy()
+            for i, dBx in enumerate(detBx):
+                if ( detSc[i] >= DETECTION_THRESHOLD ):
+                    cp = np.array( [W*np.mean(dBx[0:3:2]), H*np.mean(dBx[1:4:2])] )
+                    for igb, gBx in enumerate(game_fit_boxes):
+                        if (
+                            (cp[0] > gBx[0]) and
+                            (cp[1] > gBx[1]) and
+                            (cp[0] < gBx[2]) and
+                            (cp[1] < gBx[3])  ):
+                            if ( detCl[i]+label_id_offset == self.detect_label_index['red'] ):    ## +1 because index start from 1 in label list
+                                newGB[igb // R, igb % C] = self.RedSign
+                            if ( detCl[i]+label_id_offset == self.detect_label_index['blue'] ):
+                                newGB[igb // R, igb % C] = self.BlueSign
+            return newGB
+            
+        ####
+        ## IMAGE dETECTION
+        ####
+        ## convert to TF color format
+        image_np =  cv2.cvtColor(board_image, cv2.COLOR_BGR2RGB)
+        input_tensor = tf.convert_to_tensor(
+                np.expand_dims(image_np, 0), dtype=tf.float32)
+        detections, predictions_dict, shapes = self.detect_fn(input_tensor)
+    
+        label_id_offset = 1
+        image_np_with_detections = image_np.copy()
+        
+        ## draw predictions and other stuff
+        game_fit_boxes = define_fit_boxes()
+        draw_game_boxes()
+        draw_detected_boxes()
+        draw_detected_centers()
+        GB = getDetectionCupsArray()
+        ###print(GB)
+        self.signal_detection_matrix.emit(GB)
+        
+        ### back to openCV colorspace
+        image_np_with_detections = cv2.cvtColor(image_np_with_detections, cv2. COLOR_RGB2BGR)
+        self.image_detections['frame'] = image_np_with_detections
+    
+    
+    def get_model_detection_function(self, model):
+        """Get a tf.function for detection."""
+    
+        @tf.function
+        def detect_fn(image):
+            """Detect objects in image."""
+    
+            image, shapes = model.preprocess(image)
+            prediction_dict = model.predict(image, shapes)
+            detections = model.postprocess(prediction_dict, shapes)
+    
+            return detections, prediction_dict, tf.reshape(shapes, [-1])
+    
+        return detect_fn
 
 ###########################################################
 ###########################################################
@@ -204,7 +383,8 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         ## create the video capture thread
         self.threadVideo = VideoThread(0)
         ## connect its signal to the update_image slot
-        self.threadVideo.change_pixmap_signal.connect(self.update_image)
+        self.threadVideo.signal_change_pixmap.connect(self.update_image)
+        self.threadVideo.signal_detection_matrix.connect(self.update_game_buttons)
         ## start the thread
         self.threadVideo.start()
 
@@ -253,7 +433,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
                 btn.col = c
                 self.gameLayout.addWidget(btn, r, c)
                 pass
-            
+
 
     def video_on_context_menu(self, pos):
         contextMenu = QtWidgets.QMenu(self)
@@ -262,7 +442,6 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             act = QtGui.QAction(mode.name, self)
             act.modeToSwitch = mode
             Acts.append(act)
-            
         contextMenu.addActions(Acts)
         action = contextMenu.exec(self.cameraImageLabel.mapToGlobal(pos))   ## contextMenu for cameraImageLabel only, so use it for position search
         ## pass action to video class
@@ -272,8 +451,16 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     def setVideoSource(self, mode):
         print("setVideoSource: mode=", mode)
         self.threadVideo.mode = mode
-        
-        
+
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_game_buttons(self, GB):
+        """Updates the images of game buttons"""
+        color_map = {-1 : "red", 0 : "empty", 1 : "blue" }
+        for i in reversed(range(self.gameLayout.count())): 
+            btn = self.gameLayout.itemAt(i).widget()
+            self.setGameButtonIcon(btn, color_map[ GB[btn.row, btn.col] ])
+
 
     @QtCore.pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
