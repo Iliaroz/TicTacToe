@@ -351,6 +351,32 @@ class VideoThread(QtCore.QThread):
 ###########################################################
 
 class AppTicTacToe(QtWidgets.QMainWindow):
+    class selectPlayerUI(QtWidgets.QDialog):
+        def __init__(self, parent, usernum):
+            super().__init__()
+            uic.loadUi('user-select.ui', self)
+            self.parent = parent
+            self.usernum = usernum
+            
+            self.selection = None
+    
+            self.parent.setGameButtonIcon( self.btnHuman, "user" + str(self.usernum))
+            self.parent.setGameButtonIcon( self.btnComputer, "dobot" + str(self.usernum))
+            self.show()
+    
+        def btn_human_selected(self):
+            print("settings Function call:" + "btn_human_selected")
+            self.selection = "user"
+            self.accept()
+            pass
+        
+        def btn_computer_selected(self):
+            print("settings Function call:" + "btn_computer_selected")
+            self.selection = "dobot"
+            self.accept()
+            pass
+    
+
     def __init__(self):
         super().__init__()
         uic.loadUi('app.ui', self)
@@ -360,6 +386,8 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.icons = {
             "dobot1"    : "dobot1.png",
             "dobot2"    : "dobot2.png",
+            "user1"     : "user1.png",
+            "user2"     : "user2.png",
             "red"       : "red.png",
             "blue"      : "blue.png",
             "empty"     : "empty.png",
@@ -376,9 +404,10 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         ## Log editors for read only
         self.logPlayer1.setReadOnly(True)
         self.logPlayer2.setReadOnly(True)
-        ## images on button
-        self.setPlayerPic(1, 'dobot')
-        self.setPlayerPic(2, 'dobot')
+        ## player types (and images on button )
+        self.Player1Type = "dobot"
+        self.Player2Type = "user"
+        
         self.makeGameArea()
         ## create the video capture thread
         self.threadVideo = VideoThread(0)
@@ -386,16 +415,63 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.threadVideo.signal_change_pixmap.connect(self.update_image)
         self.threadVideo.signal_detection_matrix.connect(self.update_game_buttons)
         ## start the thread
-        self.threadVideo.start()
+        #self.threadVideo.start()
 
+    @property
+    def Player1Type(self):
+        return self._Player1Type
+    @Player1Type.setter
+    def Player1Type(self, val):
+        self._Player1Type = val
+        self.setPlayerPic(1, val)
+
+    @property
+    def Player2Type(self):
+        return self._Player2Type
+    @Player1Type.setter
+    def Player2Type(self, val):
+        self._Player2Type = val
+        self.setPlayerPic(2, val)
 
     def closeEvent(self, event):
         print("Close event received.")
         self.threadVideo.stop()
         event.accept()
 
+    def btn_player1_clicked(self):
+        print("Player1 button clicked.")
+        dialog = self.selectPlayerUI(self, 1)   # player number 1
+        dialog.exec()
+        print("Exit player selection dialog")
+        if dialog.selection != None:
+            self.Player1Type = dialog.selection
+        pass
+
+    def btn_player2_clicked(self):
+        print("Player2 button clicked.")
+        dialog = self.selectPlayerUI(self, 2)   # player number 2
+        dialog.exec()
+        print("Exit player selection dialog")
+        if dialog.selection != None:
+            self.Player2Type = dialog.selection
+        pass
 
     def setPlayerPic(self, playernum, icon):
+        """
+        Set picture of player in user interface
+
+        Parameters
+        ----------
+        playernum : TYPE
+            DESCRIPTION.
+        icon : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
         path = os.path.dirname(os.path.abspath(__file__))
         lbl = self.findChild(QtWidgets.QLabel, 'lblPlayer' + str(playernum))
         lbl.setPixmap(QtGui.QPixmap(
@@ -412,6 +488,21 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         
 
     def setGameButtonIcon(self, btn, icon):
+        """
+        
+
+        Parameters
+        ----------
+        btn : TYPE
+            DESCRIPTION.
+        icon : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
         ico = QtGui.QIcon(self.icons[icon])
         btn.setIcon(ico)
         btn.setIconSize(btn.size())
