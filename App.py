@@ -47,19 +47,19 @@ class VideoThread(QtCore.QThread):
         self.height = 480
         self.mode = VideoMode.Original
         self.markers_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-        self.boardMarkers = np.empty((4,2))
+        self.boardMarkers = [] # np.empty((4,2))
         ### output videos
         self.image_original = {}
-        self.image_original['available'] = False
+        self.image_original['valid'] = False
         self.image_original['frame'] = self.generateImage("No video")
         self.image_board = {}
-        self.image_board['available'] = False
+        self.image_board['valid'] = False
         self.image_board['frame'] = self.generateImage("No board detected")
         self.image_markers = {}
-        self.image_markers['available'] = False
+        self.image_markers['valid'] = False
         self.image_markers['frame'] = self.generateImage("No markers detected")
         self.image_detections = {}
-        self.image_detections['available'] = False
+        self.image_detections['valid'] = False
         self.image_detections['frame'] = self.generateImage("No cups detected")
         
     ### -----------------------------------------
@@ -155,9 +155,13 @@ class VideoThread(QtCore.QThread):
         if markers_number == 4:
             self.boardMarkers = m
         
-        
+        if len(self.boardMarkers) < 4:
+            self.image_board['frame'] = self.generateImage("Not all markers detected!")
+            self.image_board['valid'] = False
+            return
+
         width = height = min(self.width, self.height) #Image size after transformation
-        
+
         marker_coordinates = np.float32(self.boardMarkers)
         true_coordinates   = np.float32([[0,0],[width,0],[width,height],[0,height]])
         try:
@@ -165,14 +169,16 @@ class VideoThread(QtCore.QThread):
             img_trans = cv2.warpPerspective(camera_image,trans_mat,(width, height))
             # cv2.imshow('Converted', img_trans)
             self.image_board['frame'] = img_trans
+            self.image_board['valid'] = True
         except:
+            self.image_board['valid'] = False
             pass
-        self.CupsPositionDetection(img_trans, (self.gameSize, self.gameSize))
+        self.CupsPositionDetection( (self.gameSize, self.gameSize) )
         pass
     
     def generateImage(self, text):
         blank_image = np.zeros((self.height, self.width,3), np.uint8)
-        blank_image[:,:] = (128,0,0)
+        blank_image[:,:] = (196,0,0)
         font                   = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (10,self.width // 2)
         fontScale              = 1
@@ -221,7 +227,7 @@ class VideoThread(QtCore.QThread):
         label_map_dict = label_map_util.get_label_map_dict(label_map, use_display_name=True)
         
 
-    def CupsPositionDetection(self, board_image, board_shape):
+    def CupsPositionDetection(self, board_shape):
         FILL = 0.7
         DETECTION_THRESHOLD = 0.7
         def define_fit_boxes():
@@ -303,9 +309,14 @@ class VideoThread(QtCore.QThread):
                                 newGB[igb // R, igb % C] = self.BlueSign
             return newGB
             
-        ####
-        ## IMAGE dETECTION
-        ####
+        ###################
+        ## IMAGE DETECTION
+        ###################
+        if (self.image_board['valid'] == False):
+            return
+        else:
+            board_image = self.image_board['frame']
+            
         ## convert to TF color format
         image_np =  cv2.cvtColor(board_image, cv2.COLOR_BGR2RGB)
         input_tensor = tf.convert_to_tensor(
@@ -362,6 +373,10 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     
             self.parent.setGameButtonIcon( self.btnHuman, "user" + str(self.usernum))
             self.parent.setGameButtonIcon( self.btnComputer, "dobot" + str(self.usernum))
+            self.setWindowTitle("Select the type of player " + str(usernum))
+            self.setWindowIcon(QtGui.QIcon(self.parent.icons["icon"]))
+            self.lblHeader.setText( "Select player " + str(usernum) )
+            self.setModal(True)
             self.show()
     
         def btn_human_selected(self):
@@ -375,23 +390,27 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             self.selection = "dobot"
             self.accept()
             pass
+    ### end of class selectPlayerUI
+    ###########################################################
     
 
     def __init__(self):
         super().__init__()
+        ## icons list
+        self.icons = {
+            "icon"      : "./icons/icon.png",
+            "dobot1"    : "./icons/dobot1.png",
+            "dobot2"    : "./icons/dobot2.png",
+            "user1"     : "./icons/user1.png",
+            "user2"     : "./icons/user2.png",
+            "red"       : "./icons/red.png",
+            "blue"      : "./icons/blue.png",
+            "empty"     : "./icons/empty.png",
+            }
         uic.loadUi('app.ui', self)
         ## non-resizable main window
         self.setFixedSize(self.size())
-        ## icons list
-        self.icons = {
-            "dobot1"    : "dobot1.png",
-            "dobot2"    : "dobot2.png",
-            "user1"     : "user1.png",
-            "user2"     : "user2.png",
-            "red"       : "red.png",
-            "blue"      : "blue.png",
-            "empty"     : "empty.png",
-            }
+        self.setWindowIcon(QtGui.QIcon(self.icons["icon"]))
         self.GameSize = 3
         self.setWindowTitle("Qt tic-tac-toe game")
         self.display_width = 320
@@ -414,8 +433,9 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         ## connect its signal to the update_image slot
         self.threadVideo.signal_change_pixmap.connect(self.update_image)
         self.threadVideo.signal_detection_matrix.connect(self.update_game_buttons)
+        ## ***
         ## start the thread
-        #self.threadVideo.start()
+        self.threadVideo.start()
 
     @property
     def Player1Type(self):
@@ -456,26 +476,24 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             self.Player2Type = dialog.selection
         pass
 
+    def btn_game_control_clicked(self):
+        print("GameControl button clicked.")
+        pass
+
     def setPlayerPic(self, playernum, icon):
         """
         Set picture of player in user interface
 
         Parameters
-        ----------
-        playernum : TYPE
-            DESCRIPTION.
-        icon : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
+        playernum : int     palyer number (1 or 2)
+        icon : str          icon key from dictionary icons{}
         """
         path = os.path.dirname(os.path.abspath(__file__))
         lbl = self.findChild(QtWidgets.QLabel, 'lblPlayer' + str(playernum))
         lbl.setPixmap(QtGui.QPixmap(
-            os.path.join(path, self.icons[icon + str(playernum)])).scaled(self.display_width, self.display_height, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+                        os.path.join(path,  self.icons[icon + str(playernum)])
+                        ).scaled(self.display_width, self.display_height, 
+                                 QtCore.Qt.AspectRatioMode.KeepAspectRatio))
         lbl.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         
@@ -489,19 +507,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     def setGameButtonIcon(self, btn, icon):
         """
-        
-
-        Parameters
-        ----------
-        btn : TYPE
-            DESCRIPTION.
-        icon : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
+        set button icon and enlarge it to full size
         """
         ico = QtGui.QIcon(self.icons[icon])
         btn.setIcon(ico)

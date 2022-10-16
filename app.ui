@@ -25,9 +25,9 @@
     </property>
     <layout class="QGridLayout" name="gridLayout">
      <item row="1" column="1">
-      <widget class="QPushButton" name="btnSettings">
+      <widget class="QPushButton" name="btnGameControl">
        <property name="text">
-        <string>Settings</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -200,9 +200,26 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>btnGameControl</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>btn_game_control_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>594</x>
+     <y>47</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>619</x>
+     <y>70</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>btn_player1_clicked()</slot>
   <slot>btn_player2_clicked()</slot>
+  <slot>btn_game_control_clicked()</slot>
  </slots>
 </ui>

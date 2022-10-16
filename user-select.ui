@@ -24,7 +24,7 @@
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="lblHeader">
       <property name="minimumSize">
        <size>
         <width>0</width>
