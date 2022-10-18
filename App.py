@@ -4,19 +4,92 @@ Created on Wed Oct  5 10:02:55 2022
 
 @author: ilia
 """
-
-from PyQt6 import QtGui, QtWidgets, QtGui, QtCore, uic
+## General libraries
 import sys, os, time
-import cv2
 import numpy as np
 from enum import Enum
-## model, detection
+## GUI
+from PyQt6 import QtGui, QtWidgets, QtGui, QtCore, uic
+## model, detection, video
+import cv2
 import tensorflow as tf
 from object_detection.utils import label_map_util
 from object_detection.utils import config_util
 from object_detection.utils import visualization_utils
 from object_detection.builders import model_builder
+## Game, Player, etc..
+from TTTgame import TicTacToeGame
+import TTTplayer
 
+###########################################################
+###########################################################
+### GAME classs
+###########################################################
+###########################################################
+
+class GameGUI(TicTacToeGame, QtCore.QThread):
+    def __init__(self, App, size):
+        ## ***
+        ## run original game constructor
+        ##
+        self._isRunning = False
+        self.App = App
+        self.lastBoardState = np.empty(shape=[size, size])
+        self.App.threadVideo.signal_detection_matrix.connect(self.update_detected_board)
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_detected_board(self, GB):
+        self.lastBoardState = GB
+        pass
+    
+    def startGame(self, Player1, Player2):
+        if self.isRunning :
+            print("ERROR: Game already running!")
+            return False
+        self.isRunning = True
+        ## ***
+        ## Create Players and Game and run actual game
+        # self.game = TicTacToeGame()
+        
+    @property
+    def isRunning(self):
+        return self._isRunning
+    @isRunning.setter
+    def isRunning(self):
+        self._isRunning = True
+        
+    def stopGame(self):
+        ## ***
+        ## do some stufffff
+        self.isRunning = False
+    
+    ############
+    ## Board state
+    def getBoardState(self):
+        return self.lastBoardState
+        pass
+        
+    ############
+    ## binding output of game to GUI
+    
+    def printWarningMessage(self, msg):
+        super().printWarningMessage(msg)
+
+    def printGameWinner(self, player):
+        super().printGameWinner(player)
+        
+        
+    def printGameTie(self):
+        super().printGameTie
+        
+    def printGameTurn(self,player):
+        super().printGameTurn(player)
+        
+    
+    def printBoardState(self, board):
+        super().printBoardState(board)
+        
+        
 
 ###########################################################
 ###########################################################
@@ -412,6 +485,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.setFixedSize(self.size())
         self.setWindowIcon(QtGui.QIcon(self.icons["icon"]))
         self.GameSize = 3
+        self.gameIsRunning = False
         self.setWindowTitle("Qt tic-tac-toe game")
         self.display_width = 320
         self.display_height = 240
@@ -478,6 +552,13 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     def btn_game_control_clicked(self):
         print("GameControl button clicked.")
+        if self.gameIsRunning:
+            ## Stop game?
+            pass
+            return
+        else:
+            self.gameIsRunning = True
+            
         pass
 
     def setPlayerPic(self, playernum, icon):
@@ -574,6 +655,11 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.display_width, self.display_height, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         return QtGui.QPixmap.fromImage(p)
+
+    
+###########################################################
+### Running App
+###########################################################
     
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
