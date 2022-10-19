@@ -4,18 +4,44 @@ from TTTplayer import HumanPlayer, ComputerPlayer
 
 class TicTacToeGame:
     def __init__(self, Player1, Player2, boardSize):
+        """
+        
+
+        Parameters
+        ----------
+        Player1 : "human" or "computer" values.
+        Player2 : "human" or "computer" values.
+        boardSize : int value of board size.
+
+        Returns
+        -------
+        None.
+
+        """
         self._run_flag = False
         self.empty = 0
         self.P1sign = int(1)
         self.P2sign = int(-1)
         self.boardSize = boardSize
-        self.P1 = Player1(self.P1sign, self)
-        self.P2 = Player2(self.P2sign, self)
+        
+        #### ASSIGN PLAYERS ####
+        self.P1 = self.assignPlayer(Player1,self.P1sign)
+        self.P2 = self.assignPlayer(Player2,self.P2sign)
+        ####                ####
+        
+        # self.P1 = Player1(self.P1sign, self)
+        # self.P2 = Player2(self.P2sign, self)
         self.players = [self.P1, self.P2]
         self.playerturn = 0
         #choose randomly who will play first
         #random.shuffle(self.players)  
-  
+    
+    def assignPlayer(self, playerType, playerSign):
+        if playerType == "human":
+            playerGlobal=HumanPlayer(playerSign, self)
+        elif playerType=="computer":
+            playerGlobal=ComputerPlayer(playerSign, self)
+        return playerGlobal
       
     def DobotCleanBoard(self, board):
         """
@@ -33,20 +59,20 @@ class TicTacToeGame:
         """
         time.sleep(2)
         matrix = board.copy()
-        print("cleaning board")
+        print("Cleaning board...")
         occupied= (np.where(abs(matrix) >self.empty))
         occupied = np.asarray(occupied).T
         return occupied
     
     def boardOccupied(self, board):
         if np.all(board==self.empty):
-            print("board empty")
+            print("Board: empty")
             return False
         else:
             return True
         
     def isBoardFull(self):
-        print("checking if board is full")
+        print("Checking if board is full...")
         if np.any(self.board==self.empty):
             return False
         else:
@@ -77,7 +103,7 @@ class TicTacToeGame:
         return board
         
     def isWinner(self):
-        print("checking for the winner")
+        print("Checking for the winner...")
         status = False
         m = self.board
         diag = m.diagonal()
@@ -150,11 +176,11 @@ class TicTacToeGame:
         old = self.oldboard
         new = board
         if np.array_equal(old, new):
-            print("nothing changed")
+            print("No move detected")
             return None
         else:
-            print("checking if move is allowed")
-            print("old board\n", old, "\n new board\n", new)
+            print("Is move allowed?")
+            #print("old board\n", old, "\n new board\n", new)
                     
             empty_old = self.Occupied(old, self.empty)
             p1_old = self.Occupied(old, self.P1sign)
@@ -179,9 +205,9 @@ class TicTacToeGame:
                 print("more than one move done")
                 return False
             elif e==1:
-                print("one empt space taken")
+                print("One move made")
                 if p1>=2 or p2>=2:
-                    print("more than one change in roder was detected")
+                    print("more than one change in board was detected")
                     return False
                 elif p1==1 or p2==1:
                     return True
@@ -190,12 +216,12 @@ class TicTacToeGame:
         player = self.players[self.playerturn]
         while True:
             try:
-                print("player", player)
+                #print("player", player)
                 #player.giveBoard(self.board)
-                print("pass board to player:", self.board)
+                #print("pass board to player:", self.board)
                 boardnew = player.makeMove(self.board)
                 if self.isMoveAllowed(boardnew):
-                    print("writing to board")
+                    #print("saving board...")
                     self.board = boardnew
                     return True
                     break
@@ -228,14 +254,14 @@ class TicTacToeGame:
         
     def printGameWinner(self):
         self.changePlayer()
-        print("!!!player ",self.playerturn+1," won",
+        print("WON!!!: player",self.playerturn+1,
               self.players[self.playerturn].__class__.__name__)
         
     def printGameTie(self):
         print("Game result is a tie.")
         
     def printGameTurn(self):
-        print("its player ",self.playerturn+1," turn",
+        print("It's player",self.playerturn+1,"turn",
               self.players[self.playerturn].__class__.__name__)
         
     def printBoardState(self,board):
@@ -246,8 +272,19 @@ class TicTacToeGame:
         ----------
         board : 2D array.
         """
-        matrix = (board.copy())
-        print("board",matrix)
+        matrix = board.copy()
+        print("BOARD")
+        for row in range(self.boardSize):
+            r = matrix[row].tolist()
+            for col in range(self.boardSize):
+                if r[col]==self.empty:
+                    r[col]=" "
+                if r[col]==self.P1sign:
+                    r[col]="O"
+                if r[col]==self.P2sign:
+                    r[col]="X"
+            print(np.array(r))
+        #print("BOARD\n",matrix)
         
 
     def changePlayer(self):
@@ -264,48 +301,47 @@ class TicTacToeGame:
         while (True and self._run_flag == True):
             #### call the initial state of the board ####
             self.boardState = self.getBoardState()
-            print("board: ", self.boardState)
+            self.printBoardState(self.boardState)
             
             if self.boardOccupied(self.boardState):
                 self.printWarningMessage("Please, clear the board!")
-                print("board occupied")
+                print("Board occupied")
                 self.DobotCleanBoard(self.boardState)
             else:
                 self.board = self.boardState
                 break
-        print("=================  start a game =================")
+        print("================= GAME STARTED =================")
         
         while (True and self._run_flag == True):
             print("-------------- next turn --------------")
+            self.printGameTurn()
             self.printBoardState(self.board)
             self.oldboard = self.board.copy()
             f = self.isBoardFull()
             w = self.isWinner()
-            
+            #self.printGameTurn()
             if f:
-                print("full board")
+                print("Board is full")
                 if w:
-                    print("win")
+                    #print("win")
                     self.printGameWinner()
                     break
                 else:
                     self.printGameTie()
                     break
             elif not(f):
-                print("not full board")
+                print("Board: NOT full")
                 if w:
-                    print("win")
+                    #print("win")
                     self.printGameWinner()
                     break
                 else:
-                    print("kepp playing")
-                    self.printGameTurn()
+                    print("...good to continue...")
                     
                     if self.requestAndCheckMove():
-                        print("move is good")
+                        print("Move allowed")
                         #change player
                         self.changePlayer()
-                        self.printGameTurn()
                         continue
                     else:
                         print("cheating detected")
@@ -328,11 +364,11 @@ if (__name__ == "__main__"):
              [0,0,-1]]
 
 
-    typePlayer1 = ComputerPlayer
-    typePlayer2 = ComputerPlayer
+    type1 = "human"
+    type2 = "computer"
 
     #game instance create:
-    game = TicTacToeGame(typePlayer1, typePlayer2, 3)
+    game = TicTacToeGame(type2, type2, 3)
     #start game
     game.startGame()
 

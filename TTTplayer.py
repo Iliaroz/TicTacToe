@@ -40,7 +40,7 @@ class ComputerPlayer(Player):
         #print("cheking for winner")
         #print("matrix",matrix)
         if np.all(diag== playerSign) or np.all(diagFlip==playerSign):
-            print("win almost diag")
+            print("opportunity for diagonal win")
             status = True
         #then check all the rows and columns
         else:
@@ -68,9 +68,9 @@ class ComputerPlayer(Player):
     
     def makeMove(self, board):
         self.boardSize = np.shape(board)[0]
-        print("board size", self.boardSize)
+        #print("board size", self.boardSize)
         matrix = board
-        print("passed board", matrix)
+        #print("passed board", matrix)
         self.possibleMoves = np.argwhere(matrix == self.empty)
         possibleMoves = np.argwhere(matrix == self.empty)
         
@@ -101,7 +101,7 @@ class ComputerPlayer(Player):
             if (middlePoint==possibleMoves).all(-1).any(-1):
                 self.move = middlePoint
                 matrix[self.move[0]][self.move[1]] =self.playerSign
-                print("matrix1", matrix)
+                #print("matrix1", matrix)
                 return matrix
         
         for k in range(len(possibleMoves)):
@@ -129,7 +129,7 @@ class ComputerPlayer(Player):
                     #print("can win in one move")
                     self.move = move
                     matrix[self.move[0]][self.move[1]] = self.playerSign
-                    print("matrix2", matrix)
+                    #print("matrix2", matrix)
                     return matrix
                 else:
                     pass
@@ -152,8 +152,11 @@ class ComputerPlayer(Player):
             
         matrix[self.move[0]][self.move[1]] = self.playerSign
         
-        print("matrix3", matrix)
+        #print("matrix3", matrix)
         return matrix
+    
+    def requestMove(self):
+        return self.move
 
 """board = np.array([[0,1,1],
          [0,-1,-1],
