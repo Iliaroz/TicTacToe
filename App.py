@@ -24,9 +24,12 @@ import TTTplayer
 
 
 class Signals(QtCore.QObject):
+    signal_game_started = QtCore.pyqtSignal()
+    signal_game_stopped = QtCore.pyqtSignal()
     signal_game_status = QtCore.pyqtSignal(str)
     signal_game_p1_status = QtCore.pyqtSignal(str)
     signal_game_p2_status = QtCore.pyqtSignal(str)
+    
     signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
     signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     signal_start_game = QtCore.pyqtSignal(tuple)
@@ -68,7 +71,7 @@ class GameThread(QtCore.QThread):
         
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
-        self._run_flag = False
+        self.game._run_flag = False
         ## ***
         ## do some stufffff
         self.wait()
@@ -87,6 +90,7 @@ class GameThread(QtCore.QThread):
         if self.isRunning :
             print("ERROR: Game already running!")
             return False
+        self.signals.signal_game_started.emit()
         self.isRunning = True
         p1t = self.playerTypes[0]
         p2t = self.playerTypes[1]
@@ -105,6 +109,7 @@ class GameThread(QtCore.QThread):
         self.game.startGame()
         self.isRunning = False
         self.game = None
+        self.signals.signal_game_stopped.emit()
     
         
 
@@ -127,7 +132,6 @@ class GameGUI(TicTacToeGame , ):
         pass
     
     def update_detected_board(self, GB):
-        print("====> Got board update!")
         self.lastBoardState = GB.copy()
         pass
 
@@ -500,8 +504,6 @@ class VideoThread(QtCore.QThread):
 ###########################################################
 
 class AppTicTacToe(QtWidgets.QMainWindow):
-    # signal_start_game = QtCore.pyqtSignal(tuple)
-    # signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     
     class selectPlayerUI(QtWidgets.QDialog):
         def __init__(self, parent, usernum):
@@ -577,9 +579,15 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.signals.signal_change_pixmap.connect(self.update_image)
         self.signals.signal_detection_matrix.connect(self.update_game_buttons)
         
+        icon = self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaPlay)
+        self.btnGameControl.setIcon(icon)
+        self.btnGameControl.setText("Start game")
+        
         ## create the game thread
         self.threadGame = GameThread(self)
         ## connect its signal to gui updaters
+        self.signals.signal_game_started.connect(self.update_game_started)
+        self.signals.signal_game_stopped.connect(self.update_game_stopped)
         self.signals.signal_game_status.connect(self.update_game_status)
         self.signals.signal_game_p1_status.connect(self.update_game_p1_status)
         self.signals.signal_game_p2_status.connect(self.update_game_p2_status)
@@ -630,8 +638,17 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     def btn_game_control_clicked(self):
         print("GameControl button clicked.")
         if self.threadGame.isRunning:
-            print(" Game THREAD is already runned")
-            ## Stop game?
+            print(" Game THREAD is already runned. Should we stop game?")
+            reply = QtWidgets.QMessageBox()
+            reply.setText("Are you sure to stop game?")
+            reply.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Yes |
+                                     QtWidgets.QMessageBox.StandardButton.No)
+            ret = reply.exec()
+            if ret == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.game.stop()
+            else: # answer "No"
+                ## nothing to do..
+                pass
             pass
             return
         else:
@@ -724,7 +741,22 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         """Updates the image_label with a new opencv image"""
         qt_img = self.convert_cv_qt(cv_img)
         self.cameraImageLabel.setPixmap(qt_img)
+
         
+    @QtCore.pyqtSlot()
+    def update_game_started(self):
+        icon = self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaStop)
+        self.btnGameControl.setIcon(icon)
+        self.btnGameControl.setText("Stop game")
+        pass
+
+    @QtCore.pyqtSlot()
+    def update_game_stopped(self):
+        icon = self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaPlay)
+        self.btnGameControl.setIcon(icon)
+        self.btnGameControl.setText("Start game")
+        pass
+
     @QtCore.pyqtSlot(str)
     def update_game_status(self, stat):
         self.lblGameStatus.setText(stat)
