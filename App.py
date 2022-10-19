@@ -21,66 +21,140 @@ from object_detection.builders import model_builder
 from TTTgame import TicTacToeGame
 import TTTplayer
 
+
+
+class Signals(QtCore.QObject):
+    signal_game_status = QtCore.pyqtSignal(str)
+    signal_game_p1_status = QtCore.pyqtSignal(str)
+    signal_game_p2_status = QtCore.pyqtSignal(str)
+    signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
+    signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
+    signal_start_game = QtCore.pyqtSignal(tuple)
+    signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
+    
+    def __init__(self):
+        super().__init__()
+        pass
+
+AppSignals = Signals()
+
 ###########################################################
 ###########################################################
 ### GAME classs
 ###########################################################
 ###########################################################
 
-class GameGUI(TicTacToeGame, QtCore.QThread):
-    def __init__(self, App, size):
-        ## ***
-        ## run original game constructor
-        ##
-        self._isRunning = False
-        self.App = App
-        self.lastBoardState = np.empty(shape=[size, size])
-        self.App.threadVideo.signal_detection_matrix.connect(self.update_detected_board)
+# class GetBoard():
+#     def __init__(self):
+#         self.lastBoardState = np.empty()
+#         pass
+#     def boardState(self):
+#         return self.lastBoardState
 
-    @QtCore.pyqtSlot(np.ndarray)
-    def update_detected_board(self, GB):
-        self.lastBoardState = GB
-        pass
-    
-    def startGame(self, Player1, Player2):
-        if self.isRunning :
-            print("ERROR: Game already running!")
-            return False
-        self.isRunning = True
-        ## ***
-        ## Create Players and Game and run actual game
-        # self.game = TicTacToeGame()
+
+class GameThread(QtCore.QThread):
+    def __init__(self, parent):
+        super().__init__()
+        print("GAME: thread __init__")
+        self.signals = AppSignals
+        self.parent = parent # Application, that running thread
+        self.playerTypes = (self.parent.Player1Type, self.parent.Player2Type)
+        self.gameSize = self.parent.GameSize
+        self.game = None
+        self._run_flag = False
+        self.isRunning = False
+        self.signals.signal_detection_matrix.connect(self.update_detected_boardT)
+
         
     @property
     def isRunning(self):
         return self._isRunning
     @isRunning.setter
-    def isRunning(self):
-        self._isRunning = True
+    def isRunning(self, val):
+        self._isRunning = val
         
-    def stopGame(self):
+    def stop(self):
+        """Sets run flag to False and waits for thread to finish"""
+        self._run_flag = False
         ## ***
         ## do some stufffff
+        self.wait()
         self.isRunning = False
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_detected_boardT(self, GB):
+#        print("====> Got board update TREAD!")
+        if self.game != None:
+            self.game.update_detected_board(GB)
+        pass
+
+    
+    def run(self):
+        if self.isRunning :
+            print("ERROR: Game already running!")
+            return False
+        self.isRunning = True
+        p1t = self.playerTypes[0]
+        p2t = self.playerTypes[1]
+        if (p1t == 'dobot'):
+            Player1 = TTTplayer.ComputerPlayer
+        else:
+            Player1 = TTTplayer.HumanPlayer
+        if (p2t == 'dobot'):
+            Player2 = TTTplayer.ComputerPlayer
+        else:
+            Player2 = TTTplayer.HumanPlayer
+            
+        ## ***
+        ## Create Players and Game and run actual game
+        self.game = GameGUI(self, Player1, Player2, self.gameSize)
+        self.game.startGame()
+        self.isRunning = False
+        self.game = None
+    
+        
+
+
+
+class GameGUI(TicTacToeGame , ): # QtCore.QObject, ):
+    
+    def __init__(self, parent, P1, P2, size):
+        super(GameGUI, self).__init__( P1, P2, size)
+#        super(QtCore.QObject, self).__init__()
+        ###
+        self.parent = parent # thread, running the game code
+        self.signals = AppSignals
+        self.lastBoardState = np.empty(shape=[size, size]).fill(-1)
+
     
     ############
     ## Board state
     def getBoardState(self):
         return self.lastBoardState
         pass
+    
+#    @QtCore.pyqtSlot(np.ndarray)
+    def update_detected_board(self, GB):
+        print("====> Got board update!")
+        self.lastBoardState = GB.copy()
+        pass
+
         
     ############
     ## binding output of game to GUI
     
     def printWarningMessage(self, msg):
         super().printWarningMessage(msg)
+        self.signals.signal_game_status.emit("WARN: " + msg)
 
     def printGameWinner(self, player):
         super().printGameWinner(player)
+        self.signals.signal_game_status.emit("Some player won!!!")
         
         
     def printGameTie(self):
         super().printGameTie
+        self.signals.signal_game_status.emit("Game is tie")
         
     def printGameTurn(self,player):
         super().printGameTurn(player)
@@ -105,12 +179,13 @@ class VideoMode(Enum):
 
     
 class VideoThread(QtCore.QThread):
-    signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
-    signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
+    # signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
+    # signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     
 
     def __init__(self, videoPort, gameSize = 3):
         super().__init__()
+        self.signals = AppSignals
         self.videoPort = videoPort
         self._run_flag = True
         self.gameSize = gameSize
@@ -144,7 +219,7 @@ class VideoThread(QtCore.QThread):
 
     def run(self):
         image_show = self.generateImage("Connecting...")
-        self.signal_change_pixmap.emit(image_show)
+        self.signals.signal_change_pixmap.emit(image_show)
         ## load detection model...
         self.initDetectionModel()
         # capture from web cam
@@ -171,7 +246,7 @@ class VideoThread(QtCore.QThread):
                     flag_disconnect = True
                 self.ParseVideoFrame(ret, image_camera)
                 image_show = self.getVideoFrameToShow()
-            self.signal_change_pixmap.emit(image_show)
+            self.signals.signal_change_pixmap.emit(image_show)
         # shut down capture system
         self.camera.release()
         ### end of thread
@@ -406,7 +481,7 @@ class VideoThread(QtCore.QThread):
         draw_detected_centers()
         GB = getDetectionCupsArray()
         ###print(GB)
-        self.signal_detection_matrix.emit(GB)
+        self.signals.signal_detection_matrix.emit(GB)
         
         ### back to openCV colorspace
         image_np_with_detections = cv2.cvtColor(image_np_with_detections, cv2. COLOR_RGB2BGR)
@@ -435,6 +510,9 @@ class VideoThread(QtCore.QThread):
 ###########################################################
 
 class AppTicTacToe(QtWidgets.QMainWindow):
+    # signal_start_game = QtCore.pyqtSignal(tuple)
+    # signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
+    
     class selectPlayerUI(QtWidgets.QDialog):
         def __init__(self, parent, usernum):
             super().__init__()
@@ -502,13 +580,26 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.Player2Type = "user"
         
         self.makeGameArea()
+        self.signals = AppSignals
         ## create the video capture thread
         self.threadVideo = VideoThread(0)
         ## connect its signal to the update_image slot
-        self.threadVideo.signal_change_pixmap.connect(self.update_image)
-        self.threadVideo.signal_detection_matrix.connect(self.update_game_buttons)
+#        # self.threadVideo.signal_change_pixmap.connect(self.update_image)
+#        # self.threadVideo.signal_detection_matrix.connect(self.update_game_buttons)
+        self.signals.signal_change_pixmap.connect(self.update_image)
+        self.signals.signal_detection_matrix.connect(self.update_game_buttons)
+        
+        ## create the game thread
+        self.threadGame = GameThread(self)
+        ## connect its signal to the update_image slot
+#        # self.threadGame.signal_game_status.connect(self.update_game_status)
+#        # self.threadGame.signal_game_p1_status.connect(self.update_game_p1_status)
+#        # self.threadGame.signal_game_p2_status.connect(self.update_game_p2_status)
+        self.signals.signal_game_status.connect(self.update_game_status)
+        self.signals.signal_game_p1_status.connect(self.update_game_p1_status)
+        self.signals.signal_game_p2_status.connect(self.update_game_p2_status)
         ## ***
-        ## start the thread
+        ## start the threads: Video and Game
         self.threadVideo.start()
 
     @property
@@ -530,6 +621,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         print("Close event received.")
         self.threadVideo.stop()
+        self.threadGame.stop()
         event.accept()
 
     def btn_player1_clicked(self):
@@ -552,13 +644,15 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     def btn_game_control_clicked(self):
         print("GameControl button clicked.")
-        if self.gameIsRunning:
+        if self.threadGame.isRunning:
+            print(" Game THREAD is already runned")
             ## Stop game?
             pass
             return
         else:
-            self.gameIsRunning = True
-            
+            print("Running Game THREAD...")
+            self.threadGame.start()
+            print("Game THREAD started.")
         pass
 
     def setPlayerPic(self, playernum, icon):
@@ -634,6 +728,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(np.ndarray)
     def update_game_buttons(self, GB):
         """Updates the images of game buttons"""
+#        self.signal_detection_matrix.emit(GB)
         color_map = {-1 : "red", 0 : "empty", 1 : "blue" }
         for i in reversed(range(self.gameLayout.count())): 
             btn = self.gameLayout.itemAt(i).widget()
@@ -645,6 +740,21 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         """Updates the image_label with a new opencv image"""
         qt_img = self.convert_cv_qt(cv_img)
         self.cameraImageLabel.setPixmap(qt_img)
+        
+    @QtCore.pyqtSlot(str)
+    def update_game_status(self, stat):
+        self.lblGameStatus.setText(stat)
+        pass
+
+    @QtCore.pyqtSlot(str)
+    def update_game_p1_status(self, stat):
+        self.lblPlayer1Status.setText(stat)
+        pass
+
+    @QtCore.pyqtSlot(str)
+    def update_game_p2_status(self, stat):
+        self.lblPlayer2Status.setText(stat)
+        pass
 
 
     def convert_cv_qt(self, cv_img):

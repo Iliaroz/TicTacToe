@@ -6,11 +6,11 @@ Created on Fri Oct 14 16:03:27 2022
 """
 import numpy as np
 import random
-from TTTboard import GetBoard
+#from TTTboard import GetBoard
 
 class Player:
-    def __init__(self, sign):
-        self.getboard = GetBoard
+    def __init__(self, sign, game):
+        self.game = game
         self.empty = 0
         self.P1sign = 1
         self.P2sign =-1
@@ -21,16 +21,16 @@ class Player:
     
 
 class HumanPlayer(Player):
-    def __init__(self, sign):
-        Player.__init__(self, sign)
+    def __init__(self, sign, game):
+        Player.__init__(**locals())
     def makeMove(self, board):
-        board = self.getboard.boardState()
+        board = self.game.getBoardState()
         return board
         
 
 class ComputerPlayer(Player):
-    def __init__(self,sign):
-        Player.__init__(self,sign)
+    def __init__(self,sign, game):
+        Player.__init__(**locals())
          
     def isWinner(self, matrix, playerSign):
         m = matrix

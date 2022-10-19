@@ -1,4 +1,4 @@
-import random
+import random, time
 import numpy as np
 from TTTplayer import HumanPlayer, ComputerPlayer
 
@@ -8,8 +8,8 @@ class TicTacToeGame:
         self.P1sign = int(1)
         self.P2sign = int(-1)
         self.boardSize = boardSize
-        self.P1 = Player1(self.P1sign)
-        self.P2 = Player2(self.P2sign)
+        self.P1 = Player1(self.P1sign, self)
+        self.P2 = Player2(self.P2sign, self)
         self.players = [self.P1, self.P2]
         #choose randomly who will play first
         #random.shuffle(self.players)  
@@ -29,6 +29,7 @@ class TicTacToeGame:
         occupied : 2D array of occupied places.
 
         """
+        time.sleep(2)
         matrix = board.copy()
         print("cleaning board")
         occupied= (np.where(abs(matrix) >self.empty))
