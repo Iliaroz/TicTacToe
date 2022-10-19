@@ -10,7 +10,7 @@ class TicTacToeGame:
         self.boardSize = boardSize
         self.P1 = Player1(self.P1sign)
         self.P2 = Player2(self.P2sign)
-        self.players = [self.P1, self.P2]
+        self.players = [[self.P1, self.P2],[1,2]]
         #choose randomly who will play first
         #random.shuffle(self.players)  
         
@@ -212,14 +212,14 @@ class TicTacToeGame:
     def printWarningMessage(self, msg):
         print("Game Warning: ", msg)
         
-    def printGameWinner(self, player):
-        print("!!!player ", player.__class__.__name__," won!!!")
+    def printGameWinner(self, player,playernr):
+        print("!!!player ",playernr," ", player.__class__.__name__," won!!!")
         
     def printGameTie(self):
         print("Game result is a tie.")
         
-    def printGameTurn(self,player):
-        print("its player ", player.__class__.__name__," turn")
+    def printGameTurn(self,player, playernr):
+        print("its player ",playernr," ", player.__class__.__name__," turn")
         
     def printBoardState(self,board):
         """
@@ -233,17 +233,20 @@ class TicTacToeGame:
         print("board",matrix)
         
 
-    def changePlayer(self, player):
-        if player==self.players[0]:
-            player=self.players[1]
-        elif player==self.players[1]:
-            player=self.players[0]
+    def changePlayer(self, playernr):
+        if playernr==self.players[1][0]:
+            player=self.players[0][1]
+            self.playernr ==[1][1]
+        elif playernr==self.players[1][1]:
+            player=self.players[0][0]
+            self.playernr == self.players[1][0]
         return player
     
 
     def startGame(self):
-        print("players",self.players)
-        player = self.players[0]
+        print("players",self.players[0])
+        player = self.players[0][0]
+        self.playernr = self.players[1][0]
         ## clear the board
         while True:
             #### call the initial state of the board ####
@@ -281,18 +284,18 @@ class TicTacToeGame:
                 print("not full board")
                 if w:
                     print("win")
-                    player = self.changePlayer(player)
-                    self.printGameWinner(player)
+                    player = self.changePlayer(self.playernr)
+                    self.printGameWinner(player.playernr)
                     break
                 else:
                     print("kepp playing")
-                    self.printGameTurn(player)
+                    self.printGameTurn(player, self.playernr)
                     
                     if self.requestAndCheckMove(player):
                         print("move is good")
                         #change player
-                        player = self.changePlayer(player)
-                        self.printGameTurn(player)
+                        player = self.changePlayer(self.playernr)
+                        self.printGameTurn(player,self.playernr)
                         continue
                     else:
                         print("cheating detected")
