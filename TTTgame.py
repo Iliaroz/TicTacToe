@@ -180,7 +180,7 @@ class TicTacToeGame:
             return None
         else:
             print("Is move allowed?")
-            #print("old board\n", old, "\n new board\n", new)
+            print("old board\n", old, "\n new board\n", new)
                     
             empty_old = self.Occupied(old, self.empty)
             p1_old = self.Occupied(old, self.P1sign)
