@@ -45,10 +45,10 @@ class TicTacToeGame:
         
     def isBoardFull(self):
         print("checking if board is full")
-        if np.all(self.board==[self.P1sign,self.P2sign]):
-            return True
-        else:
+        if np.all(self.board==self.empty):
             return False
+        else:
+            return True
         
     def getBoardState(self):
         board_empty =  [
@@ -145,56 +145,66 @@ class TicTacToeGame:
             True or False
 
         """
-        print("checking if move is allowed")
         old = self.oldboard
         new = board
-        print("old board\n", old, "\n new board\n", new)
-                
-        empty_old = self.Occupied(old, self.empty)
-        p1_old = self.Occupied(old, self.P1sign)
-        p2_old = self.Occupied(old, self.P2sign)
-        empty_new = self.Occupied(new, self.empty)
-        p1_new = self.Occupied(new, self.P1sign)
-        p2_new = self.Occupied(new, self.P2sign)
-        
-        p1comparison = (p1_old==p1_new)
-        p2comparison = (p2_old==p2_new)
-        emptycomparison = (empty_old==empty_new)
-        
-        ec = np.where(emptycomparison==False)
-        p1c = np.where(p1comparison==False)
-        p2c = np.where(p2comparison==False)
-        
-        e = np.shape(ec)[1]
-        p1 = np.shape(p1c)[1]
-        p2 = np.shape(p2c)[1]
-        
-        if e>=2:
-            print("more than one move done")
-            return False
-        elif e==1:
-            print("one empt space taken")
-            if p1>=2 or p2>=2:
-                print("more than one change in roder was detected")
+        if np.array_equal(old, new):
+            print("nothing changed")
+            return None
+        else:
+            print("checking if move is allowed")
+            print("old board\n", old, "\n new board\n", new)
+                    
+            empty_old = self.Occupied(old, self.empty)
+            p1_old = self.Occupied(old, self.P1sign)
+            p2_old = self.Occupied(old, self.P2sign)
+            empty_new = self.Occupied(new, self.empty)
+            p1_new = self.Occupied(new, self.P1sign)
+            p2_new = self.Occupied(new, self.P2sign)
+            
+            p1comparison = (p1_old==p1_new)
+            p2comparison = (p2_old==p2_new)
+            emptycomparison = (empty_old==empty_new)
+            
+            ec = np.where(emptycomparison==False)
+            p1c = np.where(p1comparison==False)
+            p2c = np.where(p2comparison==False)
+            
+            e = np.shape(ec)[1]
+            p1 = np.shape(p1c)[1]
+            p2 = np.shape(p2c)[1]
+            
+            if e>=2:
+                print("more than one move done")
                 return False
-            elif p1==1 or p2==1:
-                return True
+            elif e==1:
+                print("one empt space taken")
+                if p1>=2 or p2>=2:
+                    print("more than one change in roder was detected")
+                    return False
+                elif p1==1 or p2==1:
+                    return True
          
     def requestAndCheckMove(self, player):
-        try:
-            print("player", player)
-            #player.giveBoard(self.board)
-            print("pass board to player:", self.board)
-            boardnew = player.makeMove(self.board)
-            if self.isMoveAllowed(boardnew):
-                print("writing to board")
-                self.board = boardnew
-                return True
-            else:
-                print("move not allowed")
-                pass
-        except:
-            print("pass,,,")
+        while True:
+            try:
+                print("player", player)
+                #player.giveBoard(self.board)
+                print("pass board to player:", self.board)
+                boardnew = player.makeMove(self.board)
+                if self.isMoveAllowed(boardnew):
+                    print("writing to board")
+                    self.board = boardnew
+                    return True
+                    break
+                elif self.isMoveAllowed(boardnew)==False:
+                    print("move not allowed")
+                    break
+                elif self.isMoveAllowed(boardnew)==None:
+                    print("make the move!!!")
+                    continue
+            except:
+                print("----pass----")
+                break
         
     def _full(self):
         f = (input("full ?: "))
@@ -213,14 +223,14 @@ class TicTacToeGame:
     def printWarningMessage(self, msg):
         print("Game Warning: ", msg)
         
-    def printGameWinner(self, player):
-        print("!!!player ", player.__class__.__name__," won!!!")
+    def printGameWinner(self, player,playernr):
+        print("!!!player ",playernr," ", player.__class__.__name__," won!!!")
         
     def printGameTie(self):
         print("Game result is a tie.")
         
-    def printGameTurn(self,player):
-        print("its player ", player.__class__.__name__," turn")
+    def printGameTurn(self,player, playernr):
+        print("its player ",playernr," ", player.__class__.__name__," turn")
         
     def printBoardState(self,board):
         """
@@ -234,17 +244,20 @@ class TicTacToeGame:
         print("board",matrix)
         
 
-    def changePlayer(self, player):
-        if player==self.players[0]:
-            player=self.players[1]
-        elif player==self.players[1]:
-            player=self.players[0]
+    def changePlayer(self, playernr):
+        if playernr==self.players[1][0]:
+            player=self.players[0][1]
+            self.playernr ==[1][1]
+        elif playernr==self.players[1][1]:
+            player=self.players[0][0]
+            self.playernr == self.players[1][0]
         return player
     
 
     def startGame(self):
-        print("players",self.players)
-        player = self.players[0]
+        print("players",self.players[0])
+        player = self.players[0][0]
+        self.playernr = self.players[1][0]
         ## clear the board
         while True:
             #### call the initial state of the board ####
@@ -282,18 +295,18 @@ class TicTacToeGame:
                 print("not full board")
                 if w:
                     print("win")
-                    player = self.changePlayer(player)
-                    self.printGameWinner(player)
+                    player = self.changePlayer(self.playernr)
+                    self.printGameWinner(player.playernr)
                     break
                 else:
                     print("kepp playing")
-                    self.printGameTurn(player)
+                    self.printGameTurn(player, self.playernr)
                     
                     if self.requestAndCheckMove(player):
                         print("move is good")
                         #change player
-                        player = self.changePlayer(player)
-                        self.printGameTurn(player)
+                        player = self.changePlayer(self.playernr)
+                        self.printGameTurn(player,self.playernr)
                         continue
                     else:
                         print("cheating detected")
