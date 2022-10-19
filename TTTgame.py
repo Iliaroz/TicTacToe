@@ -4,6 +4,7 @@ from TTTplayer import HumanPlayer, ComputerPlayer
 
 class TicTacToeGame:
     def __init__(self, Player1, Player2, boardSize):
+        self._run_flag = False
         self.empty = 0
         self.P1sign = int(1)
         self.P2sign = int(-1)
@@ -255,11 +256,11 @@ class TicTacToeGame:
     
 
     def startGame(self):
-        print("players",self.players[0])
+        self._run_flag = True
         player = self.players[0][0]
         self.playernr = self.players[1][0]
         ## clear the board
-        while True:
+        while (True and self._run_flag == True):
             #### call the initial state of the board ####
             self.boardState = self.getBoardState()
             print("board: ", self.boardState)
@@ -273,7 +274,7 @@ class TicTacToeGame:
                 break
         print("=================  start a game =================")
         
-        while True:
+        while (True and self._run_flag == True):
             print("-------------- next turn --------------")
             self.printBoardState(self.board)
             self.oldboard = self.board.copy()
@@ -311,7 +312,9 @@ class TicTacToeGame:
                     else:
                         print("cheating detected")
                         break
-                    
+        if ( self._run_flag == True):
+            print("Game was canceled")
+            self.printWarningMessage("Game canceled")
                     
 ##################### START GAME #####################
 

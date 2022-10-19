@@ -44,13 +44,6 @@ AppSignals = Signals()
 ###########################################################
 ###########################################################
 
-# class GetBoard():
-#     def __init__(self):
-#         self.lastBoardState = np.empty()
-#         pass
-#     def boardState(self):
-#         return self.lastBoardState
-
 
 class GameThread(QtCore.QThread):
     def __init__(self, parent):
@@ -79,6 +72,7 @@ class GameThread(QtCore.QThread):
         ## ***
         ## do some stufffff
         self.wait()
+        self.game = None
         self.isRunning = False
 
     @QtCore.pyqtSlot(np.ndarray)
@@ -116,11 +110,10 @@ class GameThread(QtCore.QThread):
 
 
 
-class GameGUI(TicTacToeGame , ): # QtCore.QObject, ):
+class GameGUI(TicTacToeGame , ):
     
     def __init__(self, parent, P1, P2, size):
         super(GameGUI, self).__init__( P1, P2, size)
-#        super(QtCore.QObject, self).__init__()
         ###
         self.parent = parent # thread, running the game code
         self.signals = AppSignals
@@ -133,7 +126,6 @@ class GameGUI(TicTacToeGame , ): # QtCore.QObject, ):
         return self.lastBoardState
         pass
     
-#    @QtCore.pyqtSlot(np.ndarray)
     def update_detected_board(self, GB):
         print("====> Got board update!")
         self.lastBoardState = GB.copy()
@@ -179,8 +171,6 @@ class VideoMode(Enum):
 
     
 class VideoThread(QtCore.QThread):
-    # signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
-    # signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     
 
     def __init__(self, videoPort, gameSize = 3):
@@ -584,17 +574,12 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         ## create the video capture thread
         self.threadVideo = VideoThread(0)
         ## connect its signal to the update_image slot
-#        # self.threadVideo.signal_change_pixmap.connect(self.update_image)
-#        # self.threadVideo.signal_detection_matrix.connect(self.update_game_buttons)
         self.signals.signal_change_pixmap.connect(self.update_image)
         self.signals.signal_detection_matrix.connect(self.update_game_buttons)
         
         ## create the game thread
         self.threadGame = GameThread(self)
-        ## connect its signal to the update_image slot
-#        # self.threadGame.signal_game_status.connect(self.update_game_status)
-#        # self.threadGame.signal_game_p1_status.connect(self.update_game_p1_status)
-#        # self.threadGame.signal_game_p2_status.connect(self.update_game_p2_status)
+        ## connect its signal to gui updaters
         self.signals.signal_game_status.connect(self.update_game_status)
         self.signals.signal_game_p1_status.connect(self.update_game_p1_status)
         self.signals.signal_game_p2_status.connect(self.update_game_p2_status)
@@ -661,7 +646,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
         Parameters
         playernum : int     palyer number (1 or 2)
-        icon : str          icon key from dictionary icons{}
+        icon : str          icon key from dictionary icons{} without number
         """
         path = os.path.dirname(os.path.abspath(__file__))
         lbl = self.findChild(QtWidgets.QLabel, 'lblPlayer' + str(playernum))
@@ -728,7 +713,6 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(np.ndarray)
     def update_game_buttons(self, GB):
         """Updates the images of game buttons"""
-#        self.signal_detection_matrix.emit(GB)
         color_map = {-1 : "red", 0 : "empty", 1 : "blue" }
         for i in reversed(range(self.gameLayout.count())): 
             btn = self.gameLayout.itemAt(i).widget()
