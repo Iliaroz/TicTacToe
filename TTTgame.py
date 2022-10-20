@@ -346,7 +346,7 @@ class TicTacToeGame:
                     else:
                         print("cheating detected")
                         break
-        if ( self._run_flag == True):
+        if ( self._run_flag == False):
             print("Game was canceled")
             self.printWarningMessage("Game canceled")
                     

@@ -32,7 +32,8 @@ class Signals(QtCore.QObject):
     
     signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
     signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
-    signal_start_game = QtCore.pyqtSignal(tuple)
+    signal_app_start_game = QtCore.pyqtSignal(tuple)
+    signal_app_stop_game = QtCore.pyqtSignal()
     signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     
     def __init__(self):
@@ -54,12 +55,12 @@ class GameThread(QtCore.QThread):
         print("GAME: thread __init__")
         self.signals = AppSignals
         self.parent = parent # Application, that running thread
-        self.playerTypes = (self.parent.Player1Type, self.parent.Player2Type)
         self.gameSize = self.parent.GameSize
         self.game = None
         self._run_flag = False
         self.isRunning = False
         self.signals.signal_detection_matrix.connect(self.update_detected_boardT)
+        self.signals.signal_app_stop_game.connect(self.slot_stop_game)
 
         
     @property
@@ -71,9 +72,8 @@ class GameThread(QtCore.QThread):
         
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
-        self.game._run_flag = False
-        ## ***
-        ## do some stufffff
+        if self.game != None:
+            self.game._run_flag = False
         self.wait()
         self.game = None
         self.isRunning = False
@@ -81,8 +81,15 @@ class GameThread(QtCore.QThread):
     @QtCore.pyqtSlot(np.ndarray)
     def update_detected_boardT(self, GB):
 #        print("====> Got board update TREAD!")
+        ## TODO: Now receive signal here.. expected, that GameGUI receive it
         if self.game != None:
             self.game.update_detected_board(GB)
+        pass
+
+    @QtCore.pyqtSlot()
+    def slot_stop_game(self):
+        if self.game != None:
+            self.game.stopGame()
         pass
 
     
@@ -92,16 +99,16 @@ class GameThread(QtCore.QThread):
             return False
         self.signals.signal_game_started.emit()
         self.isRunning = True
-        p1t = self.playerTypes[0]
-        p2t = self.playerTypes[1]
-        if (p1t == 'dobot'):
-            Player1 = TTTplayer.ComputerPlayer
+        p1t = self.parent.Player1Type
+        p2t = self.parent.Player2Type
+        if (p1t == "dobot"):
+            Player1 = "computer"
         else:
-            Player1 = TTTplayer.HumanPlayer
-        if (p2t == 'dobot'):
-            Player2 = TTTplayer.ComputerPlayer
+            Player1 = "human"
+        if (p2t == "dobot"):
+            Player2 = "computer"
         else:
-            Player2 = TTTplayer.HumanPlayer
+            Player2 = "human"
             
         ## ***
         ## Create Players and Game and run actual game
@@ -122,8 +129,13 @@ class GameGUI(TicTacToeGame , ):
         ###
         self.parent = parent # thread, running the game code
         self.signals = AppSignals
-        self.lastBoardState = np.empty(shape=[size, size]).fill(-1)
+        self.lastBoardState = np.empty(shape=[size, size])
+        self.lastBoardState.fill(-1)
+        print("GAMEGUI:")
+        print(self.lastBoardState)
 
+    def stopGame(self):
+        self._run_flag = False
     
     ############
     ## Board state
@@ -132,6 +144,7 @@ class GameGUI(TicTacToeGame , ):
         pass
     
     def update_detected_board(self, GB):
+        ## TODO: Now receive signal in GameThread class and pass it here.. expected, that GameGUI receive it
         self.lastBoardState = GB.copy()
         pass
 
@@ -143,8 +156,8 @@ class GameGUI(TicTacToeGame , ):
         super().printWarningMessage(msg)
         self.signals.signal_game_status.emit("WARN: " + msg)
 
-    def printGameWinner(self, player):
-        super().printGameWinner(player)
+    def printGameWinner(self):
+        super().printGameWinner()
         self.signals.signal_game_status.emit("Some player won!!!")
         
         
@@ -152,8 +165,8 @@ class GameGUI(TicTacToeGame , ):
         super().printGameTie
         self.signals.signal_game_status.emit("Game is tie")
         
-    def printGameTurn(self,player):
-        super().printGameTurn(player)
+    def printGameTurn(self):
+        super().printGameTurn()
         
     
     def printBoardState(self, board):
@@ -613,8 +626,8 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         print("Close event received.")
-        self.threadVideo.stop()
         self.threadGame.stop()
+        self.threadVideo.stop()
         event.accept()
 
     def btn_player1_clicked(self):
@@ -645,7 +658,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
                                      QtWidgets.QMessageBox.StandardButton.No)
             ret = reply.exec()
             if ret == QtWidgets.QMessageBox.StandardButton.Yes:
-                self.game.stop()
+                self.signals.signal_app_stop_game.emit()
             else: # answer "No"
                 ## nothing to do..
                 pass
