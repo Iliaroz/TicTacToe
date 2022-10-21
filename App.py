@@ -22,6 +22,12 @@ from TTTgame import TicTacToeGame
 import TTTplayer
 
 
+class VideoMode(Enum):
+    Board = 1
+    Original = 2
+    Markers = 3
+    Detections = 4
+
 
 class Signals(QtCore.QObject):
     signal_game_started = QtCore.pyqtSignal()
@@ -32,9 +38,11 @@ class Signals(QtCore.QObject):
     
     signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
     signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
+    signal_video_change_port = QtCore.pyqtSignal(int)
+    signal_video_change_mode = QtCore.pyqtSignal(VideoMode)
+    
     signal_app_start_game = QtCore.pyqtSignal(tuple)
     signal_app_stop_game = QtCore.pyqtSignal()
-    signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
     
     def __init__(self):
         super().__init__()
@@ -50,34 +58,18 @@ AppSignals = Signals()
 
 
 class GameThread(QtCore.QThread):
-    def __init__(self, parent):
+    def __init__(self):
         super().__init__()
         print("GAME: thread __init__")
         self.signals = AppSignals
-        self.parent = parent # Application, that running thread
-        self.gameSize = self.parent.GameSize
+        self.gameSize = 3
+        self.p1type = "dobot"
+        self.p2type = "user"
         self.game = None
-        self._run_flag = False
-        self.isRunning = False
         self.signals.signal_detection_matrix.connect(self.update_detected_boardT)
         self.signals.signal_app_stop_game.connect(self.slot_stop_game)
 
         
-    @property
-    def isRunning(self):
-        return self._isRunning
-    @isRunning.setter
-    def isRunning(self, val):
-        self._isRunning = val
-        
-    def stop(self):
-        """Sets run flag to False and waits for thread to finish"""
-        if self.game != None:
-            self.game._run_flag = False
-        self.wait()
-        self.game = None
-        self.isRunning = False
-
     @QtCore.pyqtSlot(np.ndarray)
     def update_detected_boardT(self, GB):
 #        print("====> Got board update TREAD!")
@@ -92,32 +84,48 @@ class GameThread(QtCore.QThread):
             self.game.stopGame()
         pass
 
+    def setGameParameters(self, p1t, p2t, gamesize):
+        self.gameSize = gamesize
+        self.p1type = p1t
+        self.p2type = p2t
+        pass
     
+    def stop(self):
+        """Sets run flag to False and waits for thread to finish"""
+        # if self.game != None:
+        #     self.game._run_flag = False
+        self.slot_stop_game()
+        self.wait()
+        self.game = None
+
     def run(self):
-        if self.isRunning :
-            print("ERROR: Game already running!")
-            return False
-        self.signals.signal_game_started.emit()
-        self.isRunning = True
-        p1t = self.parent.Player1Type
-        p2t = self.parent.Player2Type
+        p1t = self.p1type
+        p2t = self.p2type
+        
+        print("APP: players type:")
+        print("Player1 = ",p1t)
+        print("Player2 = ",p2t)
         if (p1t == "dobot"):
             Player1 = "computer"
         else:
             Player1 = "human"
+            
         if (p2t == "dobot"):
             Player2 = "computer"
         else:
             Player2 = "human"
             
+        print("GAME: passed players type:")
+        print("Player1 = ",Player1)
+        print("Player2 = ",Player2)
         ## ***
         ## Create Players and Game and run actual game
         self.game = GameGUI(self, Player1, Player2, self.gameSize)
         self.game.startGame()
-        self.isRunning = False
         self.game = None
         self.signals.signal_game_stopped.emit()
-    
+        
+## end of class GameThread    
         
 
 
@@ -180,12 +188,6 @@ class GameGUI(TicTacToeGame , ):
 ###########################################################
 ###########################################################
 
-class VideoMode(Enum):
-    Board = 1
-    Original = 2
-    Markers = 3
-    Detections = 4
-
     
 class VideoThread(QtCore.QThread):
     
@@ -203,7 +205,11 @@ class VideoThread(QtCore.QThread):
         self.mode = VideoMode.Original
         self.markers_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.boardMarkers = [] # np.empty((4,2))
+        ## App signals connection
+        self.signals.signal_video_change_mode.connect(self.slot_change_video_mode)
+        self.signals.signal_video_change_port.connect(self.slot_change_video_port)
         ### output videos
+        self.flag_disconnect_video = False
         self.image_original = {}
         self.image_original['valid'] = False
         self.image_original['frame'] = self.generateImage("No video")
@@ -221,6 +227,19 @@ class VideoThread(QtCore.QThread):
     ### ----------  thread and gui   ------------
     ### -----------------------------------------
     
+    @QtCore.pyqtSlot(int)
+    def slot_change_video_port(self, newport):
+        print("setVideoPort: port=", newport)
+        self.videoPort = newport
+        self.flag_disconnect_video = True
+        pass
+    
+    @QtCore.pyqtSlot(VideoMode)
+    def slot_change_video_mode(self, mode):
+        print("slot_change_video_mode: mode=", mode)
+        self.mode = mode
+        pass
+    
     def setGameSize(self, size):
         self.gameSize = size
 
@@ -231,10 +250,9 @@ class VideoThread(QtCore.QThread):
         self.initDetectionModel()
         # capture from web cam
         self.camera = cv2.VideoCapture(self.videoPort)
-        flag_disconnect = False
         while self._run_flag:
-            image_show = self.generateImage("No video device")
-            if ((self.camera is None) or (not self.camera.isOpened()) or flag_disconnect == True):
+            image_show = self.generateImage("No video device "+str(self.videoPort))
+            if ((self.camera is None) or (not self.camera.isOpened()) or self.flag_disconnect_video == True):
                 print ('Warning: unable to open video source: ', self.videoPort)
                 try:
                     self.camera.release()
@@ -242,15 +260,15 @@ class VideoThread(QtCore.QThread):
                 del(self.camera)
                 time.sleep(5)
                 self.camera = cv2.VideoCapture(self.videoPort)
-                flag_disconnect = False
+                self.flag_disconnect_video = False
             else:
                 ret, image_camera = self.camera.read()
                 if ret:
                     if self.isImageEmpty(image_camera):
                         print("Empty image!!!!!!!!!!!!!!!")
-                        flag_disconnect = True
+                        self.flag_disconnect_video = True
                 else:
-                    flag_disconnect = True
+                    self.flag_disconnect_video = True
                 self.ParseVideoFrame(ret, image_camera)
                 image_show = self.getVideoFrameToShow()
             self.signals.signal_change_pixmap.emit(image_show)
@@ -383,8 +401,10 @@ class VideoThread(QtCore.QThread):
         
 
     def CupsPositionDetection(self, board_shape):
-        FILL = 0.7
-        DETECTION_THRESHOLD = 0.7
+        ## size of boxes for cups center detection
+        FILL = 0.7 
+        ## detections threshold for classes (hand, cups, dobot,...)
+        DETECTION_THRESHOLD = 0.9
         def define_fit_boxes():
             BX = []
             H,W,_ = board_image.shape
@@ -420,7 +440,7 @@ class VideoThread(QtCore.QThread):
                         max_boxes_to_draw=20,
                         min_score_thresh=DETECTION_THRESHOLD,
                         agnostic_mode=False,
-                        skip_scores=True,
+                        skip_scores=False,
             )
         def draw_detected_centers():
             boxes = detections['detection_boxes'][0].numpy()
@@ -597,7 +617,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.btnGameControl.setText("Start game")
         
         ## create the game thread
-        self.threadGame = GameThread(self)
+        self.threadGame = GameThread()
         ## connect its signal to gui updaters
         self.signals.signal_game_started.connect(self.update_game_started)
         self.signals.signal_game_stopped.connect(self.update_game_stopped)
@@ -619,7 +639,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
     @property
     def Player2Type(self):
         return self._Player2Type
-    @Player1Type.setter
+    @Player2Type.setter
     def Player2Type(self, val):
         self._Player2Type = val
         self.setPlayerPic(2, val)
@@ -650,7 +670,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     def btn_game_control_clicked(self):
         print("GameControl button clicked.")
-        if self.threadGame.isRunning:
+        if self.threadGame.isRunning():
             print(" Game THREAD is already runned. Should we stop game?")
             reply = QtWidgets.QMessageBox()
             reply.setText("Are you sure to stop game?")
@@ -664,8 +684,11 @@ class AppTicTacToe(QtWidgets.QMainWindow):
                 pass
             pass
             return
-        else:
+        else: # game is not running
             print("Running Game THREAD...")
+            ## set game parameters
+            ## TODO: send signal instead of call method (???)
+            self.threadGame.setGameParameters(self.Player1Type, self.Player2Type, self.GameSize)
             self.threadGame.start()
             print("Game THREAD started.")
         pass
@@ -730,15 +753,22 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             act.modeToSwitch = mode
             Acts.append(act)
         contextMenu.addActions(Acts)
-        action = contextMenu.exec(self.cameraImageLabel.mapToGlobal(pos))   ## contextMenu for cameraImageLabel only, so use it for position search
+        contextMenu.addSeparator()
+        Acts = []
+        for i in range(4):
+            act = QtGui.QAction("Video port "+str(i), self)
+            act.newVideoPort = int(i)
+            Acts.append(act)
+        contextMenu.addActions(Acts)
+        ## contextMenu for cameraImageLabel only, so use it for position search
+        action = contextMenu.exec(self.cameraImageLabel.mapToGlobal(pos))   
         ## pass action to video class
         if action != None:
-            self.setVideoSource(action.modeToSwitch)
-
-    def setVideoSource(self, mode):
-        print("setVideoSource: mode=", mode)
-        self.threadVideo.mode = mode
-
+            if hasattr(action, 'modeToSwitch'):
+                self.signals.signal_video_change_mode.emit(action.modeToSwitch)
+            if hasattr(action, 'newVideoPort'):
+                self.signals.signal_video_change_port.emit(action.newVideoPort)
+                
 
     @QtCore.pyqtSlot(np.ndarray)
     def update_game_buttons(self, GB):
