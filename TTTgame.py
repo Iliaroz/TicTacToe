@@ -1,6 +1,8 @@
 import random, time
 import numpy as np
 from TTTplayer import HumanPlayer, ComputerPlayer
+#uncommment when use dobot code
+#from DobotMovement import Dobot
 
 class TicTacToeGame:
     def __init__(self, Player1, Player2, boardSize):
@@ -18,6 +20,8 @@ class TicTacToeGame:
         None.
 
         """
+        #uncommment when use dobot code
+        #self.Dobot = Dobot()
         self._run_flag = False
         self.empty = 0
         self.P1sign = int(1)
@@ -38,9 +42,9 @@ class TicTacToeGame:
     
     def assignPlayer(self, playerType, playerSign):
         if playerType == "human":
-            playerGlobal=HumanPlayer(playerSign, self)
+            playerGlobal=HumanPlayer(playerSign,self)
         elif playerType=="computer":
-            playerGlobal=ComputerPlayer(playerSign, self)
+            playerGlobal=ComputerPlayer(playerSign,self)
         return playerGlobal
       
     def DobotCleanBoard(self, board):
@@ -64,6 +68,17 @@ class TicTacToeGame:
         occupied = np.asarray(occupied).T
         return occupied
     
+    def dobotMoveCupTo(self, move):
+        """
+        Function receive board place to move cup using dobot
+
+        Parameters
+        ----------
+        move : point coordinate.
+        """
+        self.Dobot.makeMove(move)
+
+
     def boardOccupied(self, board):
         if np.all(board==self.empty):
             print("Board: empty")
@@ -222,6 +237,8 @@ class TicTacToeGame:
                 boardnew = player.makeMove(self.board)
                 if self.isMoveAllowed(boardnew):
                     #print("saving board...")
+                    move = player.requestMove()
+                    self.dobotMoveCupTo(move)
                     self.board = boardnew
                     return True
                     break
