@@ -76,7 +76,8 @@ class TicTacToeGame:
         ----------
         move : point coordinate.
         """
-        self.Dobot.makeMove(move)
+        #self.Dobot.makeMove(move)
+        pass
 
 
     def boardOccupied(self, board):
@@ -192,6 +193,7 @@ class TicTacToeGame:
         new = board
         if np.array_equal(old, new):
             print("No move detected")
+            time.sleep(2)
             return None
         else:
             print("Is move allowed?")
@@ -230,27 +232,25 @@ class TicTacToeGame:
     def requestAndCheckMove(self):
         player = self.players[self.playerturn]
         while True:
-            try:
-                #print("player", player)
-                #player.giveBoard(self.board)
-                #print("pass board to player:", self.board)
-                boardnew = player.makeMove(self.board)
-                if self.isMoveAllowed(boardnew):
-                    #print("saving board...")
-                    move = player.requestMove()
-                    self.dobotMoveCupTo(move)
-                    self.board = boardnew
-                    return True
-                    break
-                elif self.isMoveAllowed(boardnew)==False:
-                    print("move not allowed")
-                    break
-                elif self.isMoveAllowed(boardnew)==None:
-                    print("make the move!!!")
-                    continue
-            except:
-                print("----pass----")
+            #print("player", player)
+            #player.giveBoard(self.board)
+            #print("pass board to player:", self.board)
+            boardnew = player.makeMove(self.board)
+            allowed = self.isMoveAllowed(boardnew)
+            if allowed:
+                #print("saving board...")
+                # move = player.requestMove()
+                # self.dobotMoveCupTo(move)
+                self.board = boardnew
+                return True
                 break
+            elif allowed==False:
+                print("move not allowed")
+                break
+            elif allowed==None:
+                print("make the move!!!")
+                continue
+            print("----pass----")
         
     def _full(self):
         f = (input("full ?: "))
@@ -330,6 +330,7 @@ class TicTacToeGame:
         print("================= GAME STARTED =================")
         
         while (True and self._run_flag == True):
+            time.sleep(1)
             print("-------------- next turn --------------")
             self.printGameTurn()
             self.printBoardState(self.board)

@@ -49,6 +49,61 @@ class Signals(QtCore.QObject):
         pass
 
 AppSignals = Signals()
+###########################################################
+###########################################################
+### Helper  classs
+###########################################################
+###########################################################
+
+class DeltaQueue(object):
+    def __init__(self, size, initVal=None):
+        self.N = size
+        self.Samples =  [initVal] * self.N
+        self.currN = 0
+        self._last = initVal
+        self._val = initVal
+        self._integral = 0.0
+        
+    # using property decorator
+    # a getter function
+    @property
+    def val(self):
+        return self._val
+    # a setter function
+    @val.setter
+    def val(self, element):
+        try:
+            element = element
+        except:
+            return
+        self.add(element)
+
+
+    @property
+    def last(self):
+        return self._last
+
+    
+    def add(self, element):
+        cutted = self.Samples
+        self.Samples = cutted + [element]
+        self._val = element
+        if (self.currN < self.N):
+            self.currN += 1
+        self._last = self.Samples[-self.currN]
+        # else:
+            # self._last = self.Samples[-self.N]
+        self._integral = self._integral + (self._val + self._last) / 2.0 * self.currN
+        # print "ADD", element, "  to Samples",  self.Samples
+
+    def Equal(self):
+        E = []
+        for i in range(self.N-1):
+            e = np.array_equiv( self.Samples[i],  self.Samples[i+1])
+            E.append(e)
+        res = np.asarray(E).all()
+        return res
+            
 
 ###########################################################
 ###########################################################
@@ -222,6 +277,7 @@ class VideoThread(QtCore.QThread):
         self.image_detections = {}
         self.image_detections['valid'] = False
         self.image_detections['frame'] = self.generateImage("No cups detected")
+        self.GBset = DeltaQueue(9)
         
     ### -----------------------------------------
     ### ----------  thread and gui   ------------
@@ -507,8 +563,10 @@ class VideoThread(QtCore.QThread):
         draw_detected_boxes()
         draw_detected_centers()
         GB = getDetectionCupsArray()
+        self.GBset.add(GB)
         ###print(GB)
-        self.signals.signal_detection_matrix.emit(GB)
+        if self.GBset.Equal():
+            self.signals.signal_detection_matrix.emit(GB)
         
         ### back to openCV colorspace
         image_np_with_detections = cv2.cvtColor(image_np_with_detections, cv2. COLOR_RGB2BGR)
