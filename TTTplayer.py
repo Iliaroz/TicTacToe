@@ -7,6 +7,7 @@ Created on Fri Oct 14 16:03:27 2022
 import numpy as np
 import random
 #from TTTboard import GetBoard
+from DobotClass import Dobot
 
 class Player:
     def __init__(self, sign, game):
@@ -30,6 +31,7 @@ class HumanPlayer(Player):
 
 class ComputerPlayer(Player):
     def __init__(self,sign, game):
+        self.dobot = Dobot()
         Player.__init__(**locals())
          
     def isWinner(self, matrix, playerSign):
@@ -153,8 +155,12 @@ class ComputerPlayer(Player):
         matrix[self.move[0]][self.move[1]] = self.playerSign
         
         #print("matrix3", matrix)
+        self.moveDobot()
         return matrix
-    
+        
+    def moveDobot(self, move):
+        self.PlaceCupToBoard(move)
+
     def requestMove(self):
         return self.move
 
