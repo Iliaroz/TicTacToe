@@ -181,9 +181,9 @@ class Dobot():
 
 
     def setZlimit(self, z):
-	    dType.SetPTPJumpParams(self.api, z-zOffset, z-zOffset+20)
-	    #print(dType.GetPTPJumpParams(self.api))
-	    pass
+        dType.SetPTPJumpParams(self.api, z-zOffset, z-zOffset+20)
+        #print(dType.GetPTPJumpParams(self.api))
+        pass
 
     def MoveToPos(self, x, y, z):
         print(f"moving to posititon: {x}, {y}, {z}")
@@ -192,20 +192,20 @@ class Dobot():
         #self.lastIndex = dType.SetWAITCmd(self.api, 5, isQueued=1)
 
     def JumpToPos(self, x,y,z):
-	    rHead = dType.GetHOMEParams(self.api)[3]
-	    self.lastIndex = dType.SetPTPCmd(self.api, dType.PTPMode.PTPMOVJXYZMode, x, y, z+zOffset, rHead, isQueued=1)
-	    #self.lastIndex = dType.SetWAITCmd(self.api, 5, isQueued=1)
+        rHead = dType.GetHOMEParams(self.api)[3]
+        self.lastIndex = dType.SetPTPCmd(self.api, dType.PTPMode.PTPMOVJXYZMode, x, y, z+zOffset, rHead, isQueued=1)
+        #self.lastIndex = dType.SetWAITCmd(self.api, 5, isQueued=1)
 
     def PickupOn(self, ):
-	    self.lastIndex = dType.SetEndEffectorSuctionCup(self.api, 1,  1, isQueued=1)
-	    self.lastIndex = dType.SetWAITCmd(self.api, 150, isQueued=1)
+        self.lastIndex = dType.SetEndEffectorSuctionCup(self.api, 1,  1, isQueued=1)
+        self.lastIndex = dType.SetWAITCmd(self.api, 150, isQueued=1)
 
     def PickupOff(self, ):
-	    self.lastIndex = dType.SetEndEffectorSuctionCup(self.api, 1,  0, isQueued=1)
-	    self.lastIndex = dType.SetWAITCmd(self.api, 90, isQueued=1)
+        self.lastIndex = dType.SetEndEffectorSuctionCup(self.api, 1,  0, isQueued=1)
+        self.lastIndex = dType.SetWAITCmd(self.api, 90, isQueued=1)
 
     def Wait(self, waitTime):
-	    self.lastIndex = dType.SetWAITCmd(self.api, waitTime*1000, isQueued=1)
+        self.lastIndex = dType.SetWAITCmd(self.api, waitTime*1000, isQueued=1)
 
     def GetPosition(self):
         return dType.GetPose(self.api)[:3]
@@ -214,39 +214,39 @@ class Dobot():
         dType.ClearAllAlarmsState(self.api)
 
     def hang_around(self, ):
-	    pass
+        pass
 
     def printpos(self, ):
-	    cp = dType.GetPose(self.api)[:3]
-	    x, y, z = cp[0], cp[1], cp[2]
-	    print('Current position: {x:.0f} {y:.0f} {z:.0f}'.format(x=x, y=y, z=z))
-	    cp = dType.GetHOMEParams(self.api)
-	    x, y, z = cp[0], cp[1], cp[2]
-	    print('Home position: {x:.0f} {y:.0f} {z:.0f}'.format(x=x, y=y, z=z))
+        cp = dType.GetPose(self.api)[:3]
+        x, y, z = cp[0], cp[1], cp[2]
+        print('Current position: {x:.0f} {y:.0f} {z:.0f}'.format(x=x, y=y, z=z))
+        cp = dType.GetHOMEParams(self.api)
+        x, y, z = cp[0], cp[1], cp[2]
+        print('Home position: {x:.0f} {y:.0f} {z:.0f}'.format(x=x, y=y, z=z))
 
 
     def MoveColumn(self, FP, TP, N, zHeight=25, zJumpMin=0):
-	    moved = 0
-	    nextZt = (moved+1) * zHeight
-	    nextZf = (N) * zHeight
-	    for i in reversed(range(N)):
-		    print('Cycle:',i+1)
-		    nextZf = (i+1) * zHeight
-		    # to pale
-		    self.MoveToPos(FP[0], FP[1],  max(nextZf, nextZt, zJumpMin) + 10 )
-		    self.MoveToPos(FP[0], FP[1] , max(nextZf, nextZt, zJumpMin) + 10)
-		    self.MoveToPos(FP[0], FP[1],  nextZf - 1 )
-		    # pick
-		    self.PickupOn()
-		    # move
-		    nextZt = (moved+1) * zHeight
-		    self.MoveToPos(FP[0], FP[1], max(nextZf, nextZt, zJumpMin) + 10 )
-		    self.MoveToPos(TP[0], TP[1], max(nextZf, nextZt, zJumpMin) + 10 )
-		    self.MoveToPos(TP[0], TP[1], nextZt - 1 )
-		    # pick off
-		    self.PickupOff()
-		    self.MoveToPos(TP[0], TP[1], max(nextZf, nextZt, zJumpMin) + 10 )
-		    moved += 1
+        moved = 0
+        nextZt = (moved+1) * zHeight
+        nextZf = (N) * zHeight
+        for i in reversed(range(N)):
+            print('Cycle:',i+1)
+            nextZf = (i+1) * zHeight
+            # to pale
+            self.MoveToPos(FP[0], FP[1],  max(nextZf, nextZt, zJumpMin) + 10 )
+            self.MoveToPos(FP[0], FP[1] , max(nextZf, nextZt, zJumpMin) + 10)
+            self.MoveToPos(FP[0], FP[1],  nextZf - 1 )
+            # pick
+            self.PickupOn()
+            # move
+            nextZt = (moved+1) * zHeight
+            self.MoveToPos(FP[0], FP[1], max(nextZf, nextZt, zJumpMin) + 10 )
+            self.MoveToPos(TP[0], TP[1], max(nextZf, nextZt, zJumpMin) + 10 )
+            self.MoveToPos(TP[0], TP[1], nextZt - 1 )
+            # pick off
+            self.PickupOff()
+            self.MoveToPos(TP[0], TP[1], max(nextZf, nextZt, zJumpMin) + 10 )
+            moved += 1
 
 
     def PickToColumn(self, TP, zN, zUnitHeight=25, zJumpMin=0):
@@ -255,9 +255,9 @@ class Dobot():
         self.MoveToPos(TP[0], TP[1],  max(nextZt,  zJumpMin) + 10 )
         self.MoveToPos(TP[0], TP[1], max(nextZt,  zJumpMin) + 5)
         self.MoveToPos(TP[0], TP[1],  nextZt - 1 )
-		# pick
+        # pick
         self.PickupOff()
-		# move
+        # move
         self.MoveToPos(TP[0], TP[1],  max(nextZt, zJumpMin) + 10 )
 
 
