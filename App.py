@@ -154,6 +154,7 @@ class GameThread(QtCore.QThread):
         self.game = None
 
     def run(self):
+        self.signals.signal_game_started.emit()
         p1t = self.p1type
         p2t = self.p2type
         
