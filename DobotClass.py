@@ -77,14 +77,14 @@ class Dobot():
         self.BoardCS = CoordinateSystem()
         if (playerSign == 1):
             ## BLUE / LEFT side
-            self.CupStorageCS.setRotatedCS([-67.9,-175.9], [67.4,-178.2])
+            self.CupStorageCS.setRotatedCS([-67.2,-175.2], [69.4,-175.4])
             self.HomePos = [0, -200]
-            self.BoardCS.setRotatedCS([212.1,24.4], [273.7,24.1])
+            self.BoardCS.setRotatedCS([208.7,30.8], [275.4, 30.3])
         else:
             ## RED / RIGHT side
             self.CupStorageCS.setRotatedCS([-66,171.7], [67.5,171.4])
             # *** fix it!
-            self.BoardCS.setRotatedCS([274,-34.5], [206.8,-36.59])
+            self.BoardCS.setRotatedCS([274.5, -37.7], [206.8,-36.7])
             self.HomePos = [0, 200]
         self.gap = 134/4
         self.CupHeight = 25
