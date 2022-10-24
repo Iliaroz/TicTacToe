@@ -20,6 +20,9 @@ class Player:
     def makeMove(self, board):
         pass
     
+    def endOfGame(self):
+        pass
+    
 
 class HumanPlayer(Player):
     def __init__(self, sign, game):
@@ -167,6 +170,9 @@ class ComputerPlayer(Player):
 
     def requestMove(self):
         return self.move
+    
+    def endOfGame(self):
+        self.dobot.close()
 
 """board = np.array([[0,1,1],
          [0,-1,-1],

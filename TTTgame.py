@@ -369,7 +369,14 @@ class TicTacToeGame:
         if ( self._run_flag == False):
             print("Game was canceled")
             self.printWarningMessage("Game canceled")
-                    
+        self.gameOver()
+
+        
+    def gameOver(self):
+        self.P1.endOfGame()
+        self.P2.endOfGame()
+        
+
 ##################### START GAME #####################
 
 if (__name__ == "__main__"):
