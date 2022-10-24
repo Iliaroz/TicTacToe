@@ -161,6 +161,7 @@ class Dobot():
             print("Homing finished.")
         else:
             print("Homing FAILED !")
+        
 
 
     def close(self):
@@ -175,7 +176,7 @@ class Dobot():
 
     def text_prompt(self, msg):
         try:
-            return raw_input(msg)
+            return input(msg)
         except NameError:
             return input(msg)
 
@@ -192,6 +193,7 @@ class Dobot():
         #self.lastIndex = dType.SetWAITCmd(self.api, 5, isQueued=1)
 
     def JumpToPos(self, x,y,z):
+        print("Jumpong to positon, ",x,y,z)
         rHead = dType.GetHOMEParams(self.api)[3]
         self.lastIndex = dType.SetPTPCmd(self.api, dType.PTPMode.PTPMOVJXYZMode, x, y, z+zOffset, rHead, isQueued=1)
         #self.lastIndex = dType.SetWAITCmd(self.api, 5, isQueued=1)
@@ -363,11 +365,10 @@ class Dobot():
     def PlaceCupToBoard(self, move):
         nr = self.nrBlueCupSet
         gap = self.gap
-        x = move[0]*self.gap
-        y = move[1]*self.gap*-1
+        x = move[1]*self.gap
+        y = move[0]*self.gap*-1
         zn = 1
         print("passed move:", move)
-
         #get the cup
         self.PickFromCircleMove(
                         self.BlueCupStorageCS.C2D([gap*nr, 0 , self.CupHeight]), 
@@ -380,6 +381,10 @@ class Dobot():
                         self.BoardCS.C2D([x, y , self.CupHeight]), 
                         zn,
                         zJumpMin=self.CupHeight+50)
+
+        self.JumpToPos(self.BlueCupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[0],
+                        self.BlueCupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[1],
+                        self.CupHeight+50)               
         self.nrBlueCupSet +=1
 
 

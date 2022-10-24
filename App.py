@@ -641,7 +641,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             "blue"      : "./icons/blue.png",
             "empty"     : "./icons/empty.png",
             }
-        uic.loadUi('app.ui', self)
+        uic.loadUi(r'C:\Users\kasia\OneDrive - Hämeen ammattikorkeakoulu\9_Y1M1\Dobots\TicTacToe\app.ui', self)
         ## non-resizable main window
         self.setFixedSize(self.size())
         self.setWindowIcon(QtGui.QIcon(self.icons["icon"]))

@@ -232,6 +232,7 @@ class TicTacToeGame:
     def requestAndCheckMove(self):
         player = self.players[self.playerturn]
         while True:
+            time.sleep(5)
             #print("player", player)
             #player.giveBoard(self.board)
             #print("pass board to player:", self.board)
@@ -330,11 +331,11 @@ class TicTacToeGame:
         print("================= GAME STARTED =================")
         
         while (True and self._run_flag == True):
-            time.sleep(1)
+            self.oldboard = self.board.copy()
+            time.sleep(5)
             print("-------------- next turn --------------")
             self.printGameTurn()
             self.printBoardState(self.board)
-            self.oldboard = self.board.copy()
             f = self.isBoardFull()
             w = self.isWinner()
             #self.printGameTurn()

@@ -32,6 +32,8 @@ class HumanPlayer(Player):
 class ComputerPlayer(Player):
     def __init__(self,sign, game):
         self.dobot = Dobot()
+        self.dobot.connect()
+        self.dobot.HomeCalibration()
         Player.__init__(**locals())
          
     def isWinner(self, matrix, playerSign):
@@ -103,7 +105,8 @@ class ComputerPlayer(Player):
             if (middlePoint==possibleMoves).all(-1).any(-1):
                 self.move = middlePoint
                 matrix[self.move[0]][self.move[1]] =self.playerSign
-                #print("matrix1", matrix)
+                print("matrix1", matrix)
+                self.moveDobot(self.move)
                 return matrix
         
         for k in range(len(possibleMoves)):
@@ -131,7 +134,8 @@ class ComputerPlayer(Player):
                     #print("can win in one move")
                     self.move = move
                     matrix[self.move[0]][self.move[1]] = self.playerSign
-                    #print("matrix2", matrix)
+                    print("matrix2", matrix)
+                    self.moveDobot(self.move)
                     return matrix
                 else:
                     pass
@@ -154,12 +158,12 @@ class ComputerPlayer(Player):
             
         matrix[self.move[0]][self.move[1]] = self.playerSign
         
-        #print("matrix3", matrix)
-        self.moveDobot()
+        print("matrix3", matrix)
+        self.moveDobot(self.move)
         return matrix
-        
+    
     def moveDobot(self, move):
-        self.PlaceCupToBoard(move)
+        self.dobot.PlaceCupToBoard(move)
 
     def requestMove(self):
         return self.move
