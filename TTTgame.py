@@ -231,7 +231,7 @@ class TicTacToeGame:
          
     def requestAndCheckMove(self):
         player = self.players[self.playerturn]
-        while True:
+        while (self._run_flag==True):
             time.sleep(5)
             #print("player", player)
             #player.giveBoard(self.board)
@@ -247,7 +247,10 @@ class TicTacToeGame:
                 break
             elif allowed==False:
                 print("move not allowed")
-                break
+                continue
+                # prevoiusly game stopped when cheating detected, now wait for correct movement
+                # return False
+                # break
             elif allowed==None:
                 print("make the move!!!")
                 continue
@@ -333,7 +336,7 @@ class TicTacToeGame:
         
         while (True and self._run_flag == True):
             self.oldboard = self.board.copy()
-            time.sleep(10)
+            time.sleep(2)
             print("-------------- next turn --------------")
             self.printGameTurn()
             self.printBoardState(self.board)
@@ -357,13 +360,14 @@ class TicTacToeGame:
                     break
                 else:
                     print("...good to continue...")
-                    
-                    if self.requestAndCheckMove():
+                    result = self.requestAndCheckMove()
+                    if result:
                         print("Move allowed")
                         #change player
                         self.changePlayer()
                         continue
                     else:
+                        #break a game
                         print("cheating detected")
                         break
         if ( self._run_flag == False):
