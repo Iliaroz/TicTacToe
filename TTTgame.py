@@ -324,7 +324,7 @@ class TicTacToeGame:
             if self.boardOccupied(self.boardState):
                 self.printWarningMessage("Please, clear the board!")
                 print("Board occupied")
-                self.DobotCleanBoard(self.boardState)
+                #self.DobotCleanBoard(self.boardState)
             else:
                 self.board = self.boardState
                 break
@@ -332,7 +332,7 @@ class TicTacToeGame:
         
         while (True and self._run_flag == True):
             self.oldboard = self.board.copy()
-            time.sleep(5)
+            time.sleep(10)
             print("-------------- next turn --------------")
             self.printGameTurn()
             self.printBoardState(self.board)
