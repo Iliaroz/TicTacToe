@@ -67,22 +67,28 @@ class Dobot():
         dType.DobotConnect.DobotConnect_NotFound: "DobotConnect_NotFound",
         dType.DobotConnect.DobotConnect_Occupied: "DobotConnect_Occupied"}
 
-    def __init__(self):
+    def __init__(self, playerSign):
         #Load Dll and get the CDLL object
         os.add_dll_directory( os.getcwd() )
         self.api = dType.load()
         self.lastIndex = [0, ]
         ####Coordinate systems####
-        self.RedCupStorageCS = CoordinateSystem()
-        self.RedCupStorageCS.setRotatedCS([-61,-250], [77.6,-250])
-        self.BlueCupStorageCS = CoordinateSystem()
-        self.BlueCupStorageCS.setRotatedCS([-67.9,-175.9], [67.4,-178.2])
+        self.CupStorageCS = CoordinateSystem()
         self.BoardCS = CoordinateSystem()
-        self.BoardCS.setRotatedCS([212.1,24.4], [273.7,24.1])
+        if (playerSign == 1):
+            ## BLUE / LEFT side
+            self.CupStorageCS.setRotatedCS([-67.9,-175.9], [67.4,-178.2])
+            self.HomePos = [0, -200]
+            self.BoardCS.setRotatedCS([212.1,24.4], [273.7,24.1])
+        else:
+            ## RED / RIGHT side
+            self.CupStorageCS.setRotatedCS([-66,171.7], [67.5,171.4])
+            # *** fix it!
+            self.BoardCS.setRotatedCS([274,-34.5], [206.8,-36.59])
+            self.HomePos = [0, 200]
         self.gap = 134/4
         self.CupHeight = 25
-        self.nrBlueCupSet=0
-        self.x_home, self.y_home = 200, 0
+        self.cupNumberInStorage=0
        
 
     def connect(self):
@@ -142,8 +148,8 @@ class Dobot():
         #Clean Command Queued
         dType.SetQueuedCmdClear(self.api)
         self.ClearAllError()
-        x = 200
-        y = 0
+        x = self.HomePos[0]
+        y = self.HomePos[1]
         z = 100
         r = 0
         self.lastIndex = dType.SetHOMEParams(self.api,  x,  y,  z,  r,  isQueued=1)
@@ -363,7 +369,7 @@ class Dobot():
 
 
     def PlaceCupToBoard(self, move):
-        nr = self.nrBlueCupSet
+        nr = self.cupNumberInStorage
         gap = self.gap
         x = move[1]*self.gap
         y = move[0]*self.gap*-1
@@ -371,7 +377,7 @@ class Dobot():
         print("passed move:", move)
         #get the cup
         self.PickFromCircleMove(
-                        self.BlueCupStorageCS.C2D([gap*nr, 0 , self.CupHeight]), 
+                        self.CupStorageCS.C2D([gap*nr, 0 , self.CupHeight]), 
                         zn,
                         zJumpMin=self.CupHeight+50)
         print("place cup at", [x,y])
@@ -382,10 +388,10 @@ class Dobot():
                         zn,
                         zJumpMin=self.CupHeight+50)
 
-        self.JumpToPos(self.BlueCupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[0],
-                        self.BlueCupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[1],
+        self.JumpToPos(self.CupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[0],
+                        self.CupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[1],
                         self.CupHeight+50)               
-        self.nrBlueCupSet +=1
+        self.cupNumberInStorage += 1
 
 
 #####################################################

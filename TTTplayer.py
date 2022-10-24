@@ -31,7 +31,7 @@ class HumanPlayer(Player):
 
 class ComputerPlayer(Player):
     def __init__(self,sign, game):
-        self.dobot = Dobot()
+        self.dobot = Dobot(sign)
         self.dobot.connect()
         self.dobot.HomeCalibration()
         Player.__init__(**locals())

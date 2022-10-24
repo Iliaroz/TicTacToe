@@ -318,6 +318,7 @@ class TicTacToeGame:
         ## clear the board
         while (True and self._run_flag == True):
             #### call the initial state of the board ####
+            time.sleep(2)
             self.boardState = self.getBoardState()
             self.printBoardState(self.boardState)
             
