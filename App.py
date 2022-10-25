@@ -18,15 +18,10 @@ from object_detection.utils import config_util
 from object_detection.utils import visualization_utils
 from object_detection.builders import model_builder
 ## Game, Player, etc..
+from AppCommon import VideoMode, BoardState
 from TTTgame import TicTacToeGame
 import TTTplayer
 
-
-class VideoMode(Enum):
-    Board = 1
-    Original = 2
-    Markers = 3
-    Detections = 4
 
 
 class Signals(QtCore.QObject):

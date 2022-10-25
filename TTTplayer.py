@@ -6,7 +6,7 @@ Created on Fri Oct 14 16:03:27 2022
 """
 import numpy as np
 import random
-#from TTTboard import GetBoard
+from AppCommon import VideoMode, BoardState
 from DobotClass import Dobot
 
 class Player:

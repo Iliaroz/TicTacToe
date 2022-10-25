@@ -1,6 +1,8 @@
 import random, time
 import numpy as np
 from TTTplayer import HumanPlayer, ComputerPlayer
+from AppCommon import VideoMode, BoardState
+
 #uncommment when use dobot code
 #from DobotMovement import Dobot
 
@@ -24,9 +26,11 @@ class TicTacToeGame:
         #self.Dobot = Dobot()
         self._run_flag = False
         self.empty = 0
-        self.P1sign = int(1)
-        self.P2sign = int(-1)
+        self.P1sign = BoardState.Blue  # (1)
+        self.P2sign = BoardState.Red   # (-1)
         self.boardSize = boardSize
+        self.board = np.empty((self.boardSize, self.boardSize), dtype=BoardState)
+        self.board.fill(BoardState.Empty)
         
         #### ASSIGN PLAYERS ####
         self.P1 = self.assignPlayer(Player1,self.P1sign)
@@ -61,7 +65,6 @@ class TicTacToeGame:
         occupied : 2D array of occupied places.
 
         """
-        time.sleep(2)
         matrix = board.copy()
         print("Cleaning board...")
         occupied= (np.where(abs(matrix) >self.empty))
@@ -95,28 +98,27 @@ class TicTacToeGame:
             return True
         
     def getBoardState(self):
-        board_empty =  [
-                 [0,0,0],
-                 [0,0,0],
-                 [0,0,0]]
-        return np.array(board_empty)
-        ## manually input
-        val1 = int(input("val1: "))
-        val2 = int(input("val2: "))
-        val3 = int(input("val3: "))
-        
-        row1 = np.array([val1,val2,val3])
-        val4 = int(input("val4: "))
-        val5 = int(input("val5: "))
-        val6 = int(input("val6: "))
-        row2 = np.array([val4,val5,val6])
-        val7 = int(input("val7: "))
-        val8 = int(input("val8: "))
-        val9 = int(input("val9: "))
-        row3 = np.array([val7,val8,val9])
-        
-        board = np.array([row1,row2,row3])
+        rows = []
+        for r in range(self.boardSize):
+            row = np.empty(self.boardSize)
+            rowstr = input("row "+str(r+1)+ " [rb ]: ")
+            rowstr = rowstr.upper()
+            for i in range(self.boardSize):
+                try:
+                    c = rowstr[i]
+                except:
+                    c = ' '
+                if (c == 'B'):
+                    row[i] = self.P1sign
+                elif (c == 'R'):
+                    row[i] = self.P2sign
+                else:
+                    row[i] = self.empty
+            rows.append(row)
+        board = np.array(rows)
+        print("Manualy entered board:", board)
         return board
+
         
     def isWinner(self):
         print("Checking for the winner...")
@@ -232,10 +234,7 @@ class TicTacToeGame:
     def requestAndCheckMove(self):
         player = self.players[self.playerturn]
         while (self._run_flag==True):
-            time.sleep(5)
-            #print("player", player)
-            #player.giveBoard(self.board)
-            #print("pass board to player:", self.board)
+            time.sleep(1)   ## hang-up protection
             boardnew = player.makeMove(self.board)
             allowed = self.isMoveAllowed(boardnew)
             if allowed:
@@ -293,19 +292,23 @@ class TicTacToeGame:
         ----------
         board : 2D array.
         """
-        matrix = board.copy()
-        print("BOARD")
+        result = '-' * (self.boardSize*3 + 2)
         for row in range(self.boardSize):
-            r = matrix[row].tolist()
+            r = self.board[row].tolist()
+            S = "|"
             for col in range(self.boardSize):
-                if r[col]==self.empty:
-                    r[col]=" "
-                if r[col]==self.P1sign:
-                    r[col]="O"
-                if r[col]==self.P2sign:
-                    r[col]="X"
-            print(np.array(r))
-        #print("BOARD\n",matrix)
+                if r[col] == BoardState.Blue: # P1sign = blue
+                    S += " X "
+                elif r[col] == BoardState.Red:    # P2sign = red
+                    S += " O "
+                else:
+                    S += " . "
+            S += '|'
+            result += '\n'
+            result += S
+        result += '\n'
+        result += '-' * (self.boardSize*3 + 2)
+        print (result)
         
 
     def changePlayer(self):
@@ -320,8 +323,8 @@ class TicTacToeGame:
         
         ## clear the board
         while (True and self._run_flag == True):
+            time.sleep(1)   ## hang-up protection
             #### call the initial state of the board ####
-            time.sleep(2)
             self.boardState = self.getBoardState()
             self.printBoardState(self.boardState)
             
@@ -335,8 +338,8 @@ class TicTacToeGame:
         print("================= GAME STARTED =================")
         
         while (True and self._run_flag == True):
+            time.sleep(1)   ## hang-up protection
             self.oldboard = self.board.copy()
-            time.sleep(2)
             print("-------------- next turn --------------")
             self.printGameTurn()
             self.printBoardState(self.board)
@@ -396,7 +399,7 @@ if (__name__ == "__main__"):
 
 
     type1 = "human"
-    type2 = "computer"
+    type2 = "human"
 
     #game instance create:
     game = TicTacToeGame(type2, type2, 3)
