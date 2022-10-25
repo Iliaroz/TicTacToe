@@ -188,8 +188,8 @@ class GameGUI(TicTacToeGame , ):
         ###
         self.parent = parent # thread, running the game code
         self.signals = AppSignals
-        self.lastBoardState = np.empty(shape=[size, size])
-        self.lastBoardState.fill(-1)
+        self.lastBoardState = np.empty(shape=[size, size], )
+        self.lastBoardState.fill(BoardState.Red)
         print("GAMEGUI:")
         print(self.lastBoardState)
 

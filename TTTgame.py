@@ -250,7 +250,6 @@ class TicTacToeGame:
             True or False, None if no move
         """
         if np.array_equal(self.Board, newboard):
-            print("No move detected")
             return None
         else:
             print("Is move allowed?")
@@ -289,7 +288,7 @@ class TicTacToeGame:
                 ## Cups from last accepted board absent: not detected or cheated
                 self.cheatingCounter += 1
                 ## TODO:check cheating treashold
-                print("Previous state changed. Not-detected or cheated?")
+                print("Previous state changed. Not-detected or cheated?", end='\r')
                 ## continue waiting correct move
                 continue
             allowed = self.isMoveAllowed(boardnew)
@@ -297,12 +296,13 @@ class TicTacToeGame:
                 self.Board = boardnew
                 return True
             elif allowed == False:
-                print("move not allowed")
+                print("move not allowed", end='\r')
                 continue
             else:
-                print("make the move!!!")
+                print("make the move!!!", end='\r')
                 continue
-            print("----pass----")
+        ## in case of interrupting of game
+        return None
         
     
 
@@ -311,7 +311,7 @@ class TicTacToeGame:
         
         ## clear the board
         while (True and self._run_flag == True):
-            time.sleep(1)   ## hang-up protection
+            time.sleep(5)   ## hang-up protection
             #### call the initial state of the board ####
             self.boardState = self.getBoardState()
             self.printBoardState(self.boardState)
@@ -356,7 +356,7 @@ class TicTacToeGame:
                 print("cheating detected")
                 break
             else:
-                print("CheckMove: unexpected result")
+                print("CheckMove: interrupted.")
                 break
         ## end of game-turn while cycle
         if ( self._run_flag == False):
