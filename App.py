@@ -249,8 +249,8 @@ class VideoThread(QtCore.QThread):
         self.videoPort = videoPort
         self._run_flag = True
         self.gameSize = gameSize
-        self.RedSign = -1
-        self.BlueSign = 1
+        self.RedSign = BoardState.Red   # -1
+        self.BlueSign = BoardState.Blue # 1
         self.width = 640
         self.height = 480
         self.mode = VideoMode.Original
@@ -518,6 +518,8 @@ class VideoThread(QtCore.QThread):
             H,W,_ = board_image.shape
             R,C = board_shape
             newGB = np.zeros((R, C))
+            self.Board = np.empty((R, C), dtype=BoardState)
+            self.Board.fill(BoardState.Empty)
             detBx = detections['detection_boxes'][0].numpy()
             detCl = detections['detection_classes'][0].numpy()
             detSc = detections['detection_scores'][0].numpy()
@@ -830,7 +832,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         color_map = {-1 : "red", 0 : "empty", 1 : "blue" }
         for i in reversed(range(self.gameLayout.count())): 
             btn = self.gameLayout.itemAt(i).widget()
-            self.setGameButtonIcon(btn, color_map[ GB[btn.row, btn.col] ])
+            self.setGameButtonIcon(btn, color_map[ int(GB[btn.row, btn.col]) ])
 
 
     @QtCore.pyqtSlot(np.ndarray)

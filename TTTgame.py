@@ -100,7 +100,7 @@ class TicTacToeGame:
         rows = []
         for r in range(self.boardSize):
             row = np.empty(self.boardSize)
-            rowstr = input("row "+str(r+1)+ " [rb ]: ")
+            rowstr = input("row "+str(r+1)+ " [br ]: ")
             rowstr = rowstr.upper()
             for i in range(self.boardSize):
                 try:
@@ -201,7 +201,7 @@ class TicTacToeGame:
         print("It's player",self.playerturn+1,"turn",
               self.currenPlayer.__class__.__name__)
         
-    def printBoardState(self,board):
+    def printBoardState(self, board):
         """
         print board
 
@@ -211,7 +211,7 @@ class TicTacToeGame:
         """
         result = '-' * (self.boardSize*3 + 2)
         for row in range(self.boardSize):
-            r = self.Board[row].tolist()
+            r = board[row].tolist()
             S = "|"
             for col in range(self.boardSize):
                 if r[col] == BoardState.Blue: # P1sign = blue
@@ -288,7 +288,7 @@ class TicTacToeGame:
                 ## Cups from last accepted board absent: not detected or cheated
                 self.cheatingCounter += 1
                 ## TODO:check cheating treashold
-                print("Previous state changed. Not-detected or cheated?", end='\r')
+                print("\rPrevious state changed. Not-detected or cheated?", end='')
                 ## continue waiting correct move
                 continue
             allowed = self.isMoveAllowed(boardnew)
@@ -296,10 +296,10 @@ class TicTacToeGame:
                 self.Board = boardnew
                 return True
             elif allowed == False:
-                print("move not allowed", end='\r')
+                print("\rmove not allowed" + ' '*15, end='')
                 continue
             else:
-                print("make the move!!!", end='\r')
+                print("\rmake the move!!!" + ' '*15, end='')
                 continue
         ## in case of interrupting of game
         return None
