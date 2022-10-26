@@ -139,10 +139,13 @@ class ComputerPlayer(Player):
             middlePoint = [middle, middle]
             if (middlePoint == possibleMoves).all(-1).any(-1):
                 self.move = middlePoint
-                matrix[self.move[0]][self.move[1]] = self.playerSign
-                print("matrix1\n", matrix)
-                self.offeredMove = self.move
-                return matrix
+                cornersOpen.append(self.move)
+               
+                #dont make move, just pass it to cornersOpen^^^
+                #matrix[self.move[0]][self.move[1]] = self.playerSign
+                #print("matrix1\n", matrix)
+                #self.offeredMove = self.move
+                #return matrix
         
         for k in range(len(possibleMoves)):
             position = possibleMoves[k]
@@ -181,14 +184,15 @@ class ComputerPlayer(Player):
         #print("openedges", edgesOpen)
         
         #if not(self.isWinner(self.matrix, self.P1sign)):
-        #go for corners
-        if len(cornersOpen)>0:
-            self.move = self.selectRandom(cornersOpen)
-            #return self.move
-
+        
         #go for edges
         if len(edgesOpen)>0:
             self.move = self.selectRandom(edgesOpen)
+            #return self.move
+        
+        #go for corners
+        if len(cornersOpen)>0:
+            self.move = self.selectRandom(cornersOpen)
             #return self.move
             
         matrix[self.move[0]][self.move[1]] = self.playerSign
