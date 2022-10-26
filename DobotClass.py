@@ -120,9 +120,8 @@ class Dobot():
         while self.lastIndex[0] > dType.GetQueuedCmdCurrentIndex(self.api)[0]:
             dType.dSleep(100)
             if (timeOut != None):
-                print('.', end='')
                 delta = time.time() - start
-                print('Delta:', delta)
+                print('\rDelta:', delta, end='')
                 if delta > timeOut:
                     return False
             ### alrm = dType.GetAlarmsState(self.api)[0]
@@ -392,6 +391,7 @@ class Dobot():
                         self.CupStorageCS.C2D([gap*nr, 0 , self.CupHeight])[1],
                         self.CupHeight+50)               
         self.cupNumberInStorage += 1
+        done = self.WaitCommandsDone(20)
 
 
 #####################################################

@@ -12,32 +12,49 @@ from DobotClass import Dobot
 class Player:
     def __init__(self, sign, game):
         self.game = game
-        self.empty = 0
-        self.P1sign = 1
-        self.P2sign =-1
+        self.empty = BoardState.Empty # 0
+        self.P1sign = BoardState.Blue # 1
+        self.P2sign = BoardState.Red #-1
         self.playerSign = sign
         
-    def makeMove(self, board):
+    def getNextMove(self, board):
+        """
+        return next player move to Game
+        """
+        pass
+    
+    def MoveApproved(self):
+        """
+        Called by Game when last move gotten by getNextMove is accepted by Game
+        """
         pass
     
     def endOfGame(self):
         pass
     
 
+
+
+
 class HumanPlayer(Player):
     def __init__(self, sign, game):
         Player.__init__(**locals())
-    def makeMove(self, board):
+    def getNextMove(self, board):
         board = self.game.getBoardState()
         return board
         
 
+
+
+
 class ComputerPlayer(Player):
     def __init__(self,sign, game):
+        self.offeredMove = None # last move passed to Game
         self.dobot = Dobot(sign)
         self.dobot.connect()
         self.dobot.HomeCalibration()
         Player.__init__(**locals())
+
          
     def isWinner(self, matrix, playerSign):
         m = matrix
@@ -46,7 +63,7 @@ class ComputerPlayer(Player):
         #first check the diagonal if any win
         #print("cheking for winner")
         #print("matrix",matrix)
-        if np.all(diag== playerSign) or np.all(diagFlip==playerSign):
+        if np.all(diag == playerSign) or np.all(diagFlip == playerSign):
             print("opportunity for diagonal win")
             status = True
         #then check all the rows and columns
@@ -61,10 +78,8 @@ class ComputerPlayer(Player):
                     #print("win for col rows")
                     status = True
         return status
+
         
-    def spaceIsFree(self, position):
-        col,row=position[0],position[1]
-        return self.matrix[col][row] == self.empty 
 
     def selectRandom(self, arrayMoves):
         import random
@@ -72,18 +87,20 @@ class ComputerPlayer(Player):
         move = np.array(arrayMoves[choice])
         move = [move[0], move[1]]
         return move    
+
     
-    def makeMove(self, board):
+    def getNextMove(self, board):
         self.boardSize = np.shape(board)[0]
         #print("board size", self.boardSize)
-        matrix = board
+        matrix = board.copy()
         #print("passed board", matrix)
         self.possibleMoves = np.argwhere(matrix == self.empty)
         possibleMoves = np.argwhere(matrix == self.empty)
         
-        corners = [[0,0],[0,self.boardSize-1],
+        corners = [[0,0],
+                   [0,self.boardSize-1],
                    [self.boardSize-1, self.boardSize-1],
-                  [self.boardSize-1,0]]
+                   [self.boardSize-1,0]]
         edges=[]
         for i in [0,self.boardSize-1]:
             for k in range(1,self.boardSize-1):
@@ -92,8 +109,6 @@ class ComputerPlayer(Player):
                 edges.append(point1)
                 edges.append(point2)
                 
-        #print("possible moves",possibleMoves)
-        #print("edges:",edges)
         cornersOpen = []
         middlePoint = []
         edgesOpen = []
@@ -105,11 +120,11 @@ class ComputerPlayer(Player):
             #get the middle point
             middle = int((self.boardSize/2)-0.5)
             middlePoint = [middle, middle]
-            if (middlePoint==possibleMoves).all(-1).any(-1):
+            if (middlePoint == possibleMoves).all(-1).any(-1):
                 self.move = middlePoint
-                matrix[self.move[0]][self.move[1]] =self.playerSign
-                print("matrix1", matrix)
-                self.moveDobot(self.move)
+                matrix[self.move[0]][self.move[1]] = self.playerSign
+                print("matrix1\n", matrix)
+                self.offeredMove = self.move
                 return matrix
         
         for k in range(len(possibleMoves)):
@@ -137,8 +152,8 @@ class ComputerPlayer(Player):
                     #print("can win in one move")
                     self.move = move
                     matrix[self.move[0]][self.move[1]] = self.playerSign
-                    print("matrix2", matrix)
-                    self.moveDobot(self.move)
+                    print("matrix2\n", matrix)
+                    self.offeredMove = self.move
                     return matrix
                 else:
                     pass
@@ -161,12 +176,15 @@ class ComputerPlayer(Player):
             
         matrix[self.move[0]][self.move[1]] = self.playerSign
         
-        print("matrix3", matrix)
-        self.moveDobot(self.move)
+        print("matrix3\n", matrix)
+        self.offeredMove = self.move
         return matrix
+
     
-    def moveDobot(self, move):
-        self.dobot.PlaceCupToBoard(move)
+    def MoveApproved(self):
+        if self.offeredMove != None:
+            self.dobot.PlaceCupToBoard(self.offeredMove)
+            self.offeredMove = None
 
     def requestMove(self):
         return self.move
@@ -174,9 +192,3 @@ class ComputerPlayer(Player):
     def endOfGame(self):
         self.dobot.close()
 
-"""board = np.array([[0,1,1],
-         [0,-1,-1],
-         [1,-1,0]])    
-
-z=ComputerPlayer(board)
-z.makeMove(board)"""

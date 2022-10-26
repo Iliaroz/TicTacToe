@@ -78,7 +78,6 @@ class TicTacToeGame:
         ----------
         move : point coordinate.
         """
-        #self.Dobot.makeMove(move)
         pass
 
 
@@ -280,7 +279,8 @@ class TicTacToeGame:
     def requestAndCheckMove(self):
         while (self._run_flag==True):
             time.sleep(1)   ## hang-up protection
-            boardnew = self.currenPlayer.makeMove(self.Board)
+            boardnew = self.currenPlayer.getNextMove(self.Board)
+            ##print("Player's getNextMove return:\n", boardnew)
             lastpr = self.isLastBoardStatePresent(boardnew)
             if (lastpr == True):
                 self.cheatingCounter = 0
@@ -296,7 +296,7 @@ class TicTacToeGame:
                 self.Board = boardnew
                 return True
             elif allowed == False:
-                print("\rmove not allowed" + ' '*15, end='')
+                print("move not allowed" , )
                 continue
             else:
                 print("\rmake the move!!!" + ' '*15, end='')
@@ -351,6 +351,7 @@ class TicTacToeGame:
             checkresult = self.requestAndCheckMove()
             if (checkresult == True):
                 print("Move allowed")
+                self.currenPlayer.MoveApproved()
                 continue # game
             elif (checkresult == False):
                 print("cheating detected")
