@@ -40,6 +40,7 @@ class TicTacToeGame:
         self.players = [self.P1, self.P2]
         self.playerturn = 0
         self.currenPlayer = self.players[self.playerturn]
+        self.oppositePlayer = self.players[self.playerturn+1]
         self.cheatingCounter = 0
         #choose randomly who will play first
     
@@ -140,24 +141,6 @@ class TicTacToeGame:
         return status
     
 
-    def Empty(self,b):
-        """
-        checks for empty spaces
-
-        Parameters
-        ----------
-        b : 2D array.
-
-        Returns
-        -------
-        Empty : 2D array of empty spaces.
-
-        """
-        EmptySpaces = np.where(b==self.empty)
-        Empty = np.ones(b.shape, bool)
-        Empty[EmptySpaces]=False
-        return Empty
-
 
     def isLastBoardStatePresent(self, newboard):
 
@@ -185,21 +168,30 @@ class TicTacToeGame:
         elif w == "n":
             return False
         
-        
+    def _printWarningMessage(self, msg):
+        self.printWarningMessage(msg)
     def printWarningMessage(self, msg):
         print("Game Warning: ", msg)
-        
-    def printGameWinner(self):
-        print("WON!!!: player",self.playerturn+1,
+
+    def _printGameWinner(self):
+        self.printGameWinner(self.playerturn+1)
+    def printGameWinner(self, playernumber):
+        print("WON!!!: player", playernumber,
               self.currenPlayer.__class__.__name__)
         
+    def _printGameTie(self):
+        self.printGameTie()
     def printGameTie(self):
         print("Game result is a tie.")
-        
-    def printGameTurn(self):
-        print("It's player",self.playerturn+1,"turn",
+
+    def _printGameTurn(self):
+        self.printGameTurn(self.playerturn+1)
+    def printGameTurn(self, playernumber):
+        print("It's player",playernumber,"turn",
               self.currenPlayer.__class__.__name__)
         
+    def _printBoardState(self, board):
+        self.printBoardState(board)
     def printBoardState(self, board):
         """
         print board
@@ -228,6 +220,7 @@ class TicTacToeGame:
         
 
     def changePlayer(self):
+        self.oppositePlayer = self.players[self.playerturn]
         if self.playerturn == 0:
             self.playerturn = 1
         else:
@@ -297,6 +290,7 @@ class TicTacToeGame:
                 return True
             elif allowed == False:
                 print("move not allowed" , )
+                self._printWarningMessage("Last move is wrong!")
                 continue
             else:
                 print("\rmake the move!!!" + ' '*15, end='')
@@ -314,10 +308,10 @@ class TicTacToeGame:
             time.sleep(5)   ## hang-up protection
             #### call the initial state of the board ####
             self.boardState = self.getBoardState()
-            self.printBoardState(self.boardState)
+            self._printBoardState(self.boardState)
             
             if self.boardOccupied(self.boardState):
-                self.printWarningMessage("Please, clear the board!")
+                self._printWarningMessage("Please, clear the board!")
                 print("Board occupied")
                 #self.DobotCleanBoard(self.boardState)
             else:
@@ -335,19 +329,19 @@ class TicTacToeGame:
             if full:
                 print("Board is full")
                 if win:
-                    self.printGameWinner()
+                    self.GameWin()
                 else:
-                    self.printGameTie()
+                    self.GameTie()
                 break
             elif not(full):
                 print("Board: NOT full")
                 if win:
-                    self.printGameWinner()
+                    self.GameWin()
                     break
             print("-------------- next turn --------------")
             self.changePlayer()
-            self.printGameTurn()
-            self.printBoardState(self.Board)
+            self._printGameTurn()
+            self._printBoardState(self.Board)
             checkresult = self.requestAndCheckMove()
             if (checkresult == True):
                 print("Move allowed")
@@ -360,12 +354,22 @@ class TicTacToeGame:
                 print("CheckMove: interrupted.")
                 break
         ## end of game-turn while cycle
+        ## check game is canceled and finish game!
         if ( self._run_flag == False):
             print("Game was canceled")
-            self.printWarningMessage("Game canceled")
+            self._printWarningMessage("Game canceled")
         self.gameOver()
 
-        
+
+
+    def GameWin(self):        
+        self._printGameWinner()
+        self.oppositePlayer.Loser()
+        self.currenPlayer.Winner()
+
+    def GameTie(self):        
+        self._printGameTie()
+
     def gameOver(self):
         self.P1.endOfGame()
         self.P2.endOfGame()

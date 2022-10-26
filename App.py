@@ -215,19 +215,32 @@ class GameGUI(TicTacToeGame , ):
         super().printWarningMessage(msg)
         self.signals.signal_game_status.emit("WARN: " + msg)
 
-    def printGameWinner(self):
-        super().printGameWinner()
-        self.signals.signal_game_status.emit("Some player won!!!")
+    def printGameWinner(self, playernumber):
+        super().printGameWinner(playernumber)
+        self.signals.signal_game_status.emit("Player " + str(playernumber) + " won!!!")
+        self.signals.signal_game_p1_status.emit("")
+        self.signals.signal_game_p2_status.emit("")
+        if (playernumber == 1):
+            self.signals.signal_game_p1_status.emit("YEE! I won !!!")
+        if (playernumber == 2):
+            self.signals.signal_game_p2_status.emit("YEE! I won !!!")
         
         
     def printGameTie(self):
         super().printGameTie
         self.signals.signal_game_status.emit("Game is tie")
         
-    def printGameTurn(self):
-        super().printGameTurn()
-        
-    
+    def printGameTurn(self, playernumber):
+        super().printGameTurn(playernumber)
+        self.signals.signal_game_status.emit("")
+        self.signals.signal_game_p1_status.emit("")
+        self.signals.signal_game_p2_status.emit("")
+        if (playernumber == 1):
+            self.signals.signal_game_p1_status.emit("Make your move, player!")
+        if (playernumber == 2):
+            self.signals.signal_game_p2_status.emit("Make your move, player!")
+
+
     def printBoardState(self, board):
         super().printBoardState(board)
         

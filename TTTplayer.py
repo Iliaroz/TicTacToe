@@ -29,6 +29,21 @@ class Player:
         """
         pass
     
+    def Winner(self):
+        """
+        Call by Game when player won the game
+        """
+        pass
+
+    def Loser(self):
+        """
+        Call by Game when player lose game
+        """
+        pass
+
+    def startOfGame(self):
+        pass
+
     def endOfGame(self):
         pass
     
@@ -42,7 +57,9 @@ class HumanPlayer(Player):
     def getNextMove(self, board):
         board = self.game.getBoardState()
         return board
-        
+    def startOfGame(self):
+        pass
+
 
 
 
@@ -189,6 +206,9 @@ class ComputerPlayer(Player):
     def requestMove(self):
         return self.move
     
+    def startOfGame(self):
+        pass
+
     def endOfGame(self):
         self.dobot.close()
 
