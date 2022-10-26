@@ -152,7 +152,7 @@ class ComputerPlayer(Player):
                 edgesOpen.append(position)
                 
          
-        for player in [self.P2sign, self.P1sign]:
+        for player in [self.game.currenPlayer.playerSign, self.game.oppositePlayer.playerSign]:
             for k in range(len(possibleMoves)):
                 #print("possible moves:",len(possibleMoves))
                 boardCopy = matrix.copy()
