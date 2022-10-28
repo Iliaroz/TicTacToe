@@ -24,6 +24,19 @@ class Player:
     def getNextMove(self, board):
         """
         return next player move to Game
+        
+        Parameters
+        ----------
+        board : 2D-array
+            current game board. 
+
+        Returns
+        -------
+        Tuple or 2D-array
+            return the move to Game. 
+            Could be passed the move as tuple(row, col)
+            or 2d-array as new board configuration.
+
         """
         pass
     

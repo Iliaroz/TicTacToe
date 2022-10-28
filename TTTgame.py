@@ -13,7 +13,6 @@ logger = logging.getLogger("AppTicTacToe")
 class TicTacToeGame:
     def __init__(self, Player1, Player2, boardSize, nr=0):
         """
-        
 
         Parameters
         ----------
@@ -80,16 +79,6 @@ class TicTacToeGame:
         occupied = np.asarray(occupied).T
         return occupied
     
-    def dobotMoveCupTo(self, move):
-        """
-        Function receive board place to move cup using dobot
-
-        Parameters
-        ----------
-        move : point coordinate.
-        """
-        pass
-
 
     def boardOccupied(self, board):
         if np.all(board==self.empty):
@@ -106,6 +95,15 @@ class TicTacToeGame:
             return True
         
     def getBoardState(self):
+        """
+        Returns manually entered board state
+
+        Returns
+        -------
+        board : 2D-array
+            cups configuration.
+
+        """
         rows = []
         for r in range(self.boardSize):
             row = np.empty(self.boardSize)
@@ -152,7 +150,23 @@ class TicTacToeGame:
 
 
     def isLastBoardStatePresent(self, newboard):
+        """
+        Check, that previous state of board (position and "color") is 
+        present in _newboard_ array
 
+        Parameters
+        ----------
+        newboard : 2D-array
+            Board state to be checked.
+
+        Returns
+        -------
+        result : bool
+            True -- previous board state is presented in newboard.
+            False -- previous board state is NOT presented in newboard
+                    by any reason: "color" is changed or position is empty
+
+        """
         ## mask of Board state
         maskB = np.isin(self.Board, [self.P1sign, self.P2sign])
         ## set all new moves in NewBoard to Empty
@@ -280,6 +294,18 @@ class TicTacToeGame:
          
 
     def requestAndCheckMove(self):
+        """
+        Ask Player to get a next move in game, check that move is allowed.
+        If the given move is not allowed, ask Player  again.
+
+        Returns
+        -------
+        bool
+            True -- finaly the move is accepted.
+            None -- in case the Game was interrupted
+            False -- never. TODO: return False if cheating detected
+
+        """
         while (self._run_flag==True):
             time.sleep(1)   ## hang-up protection
             newmove = self.currenPlayer.getNextMove(self.Board)
@@ -318,8 +344,25 @@ class TicTacToeGame:
     
 
     def startGame(self):
+        """
+        Main Game loop:
+            Ask from player the move.
+            Check for winner or tie.
+            Change player
+            Repeat
+        At beginning wait till the board (especialy given by object detection) is empty.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
         self._run_flag = True
         self.result = None
+        
+        
+        ### TODO: Allow for second player to be the one cup on board (opposite color)
         
         ## clear the board
         while (True and self._run_flag == True):

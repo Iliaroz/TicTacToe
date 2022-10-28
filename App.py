@@ -212,6 +212,7 @@ class GameGUI(TicTacToeGame , ):
 
         
     ############
+    ## overwrite Game functions:
     ## binding output of game to GUI
     
     def printWarningMessage(self, msg):
@@ -301,6 +302,8 @@ class VideoThread(QtCore.QThread):
     
     @QtCore.pyqtSlot(int)
     def slot_change_video_port(self, newport):
+        """Slot, catch signal from Gui to change video port
+        """
         logger.info("setVideoPort: port=" + str(newport))
         self.videoPort = newport
         self.flag_disconnect_video = True
@@ -308,6 +311,8 @@ class VideoThread(QtCore.QThread):
     
     @QtCore.pyqtSlot(VideoMode)
     def slot_change_video_mode(self, mode):
+        """Slot, catch signal from Gui to change video mode: what frame will be passed to GUI
+        """
         logger.info("Changing video mode: mode=" + str(mode))
         self.mode = mode
         pass
@@ -316,6 +321,13 @@ class VideoThread(QtCore.QThread):
         self.gameSize = size
 
     def run(self):
+        """
+        Video Thread runnable code.
+            * open camera
+            * check image is not empty 
+            * pass frame to parsing
+            * update frame and pass it as signal to GUI
+        """
         image_show = self.generateImage("Connecting...")
         self.signals.signal_change_pixmap.emit(image_show)
         ## load detection model...
@@ -375,6 +387,13 @@ class VideoThread(QtCore.QThread):
         return res
         
     def ParseVideoFrame(self, retrived, camera_image):
+        """
+        Main parsing function. 
+        If frame is retrived, it tries to find the markers in frame.
+        If markers are founded, Board is cutted from image and pass to detection
+        Detection part tries to detect Cups in <Board Image>
+        All founded cups checked for their places and the detected Board is formed
+        """
         if not retrived:
             self.image_original['frame'] = self.generateImage("No video")
             self.image_board['frame'] = self.generateImage("No video board")
@@ -745,6 +764,9 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         pass
 
     def btn_game_control_clicked(self):
+        """
+        Open dialog for Player type selection
+        """
         logger.debug("GameControl button clicked.")
         if self.threadGame.isRunning():
             logger.debug(" Game THREAD is already runned. Should we stop game?")
@@ -805,6 +827,9 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
 
     def makeGameArea(self):
+        """
+        Form the button area using <Board Size>. 
+        """
         ## delete all existed buttons
         for i in reversed(range(self.gameLayout.count())): 
             self.gameLayout.itemAt(i).widget().setParent(None)
@@ -822,6 +847,9 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
 
     def video_on_context_menu(self, pos):
+        """
+        Create Context Menu on video frame
+        """
         contextMenu = QtWidgets.QMenu(self)
         Acts = []
         for i, mode in enumerate(VideoMode):
@@ -848,7 +876,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(np.ndarray)
     def update_game_buttons_detection(self, GB):
-        """Updates the images of game buttons"""
+        """Updates the images of game buttons, placing detected cups"""
         ## TODO: BoardState
         color_map = {-1 : "red", 0 : "empty", 1 : "blue" }
         for i in reversed(range(self.gameLayout.count())): 
@@ -857,7 +885,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(np.ndarray)
     def update_game_buttons_board(self, GB):
-        """Updates the images of game buttons"""
+        """Updates the color of game buttons according to current approved game Board"""
         ## TODO: BoardState
         color_map = {-1 : "(255,128,128,128)", 0 : None, 1 : "(128,128,255,128)" }
         for i in reversed(range(self.gameLayout.count())): 
