@@ -2,12 +2,16 @@ import random, time
 import numpy as np
 from TTTplayer import HumanPlayer, ComputerPlayer
 from AppCommon import VideoMode, BoardState
+import logging
+logger = logging.getLogger("AppTicTacToe")
+
+
 
 #uncommment when use dobot code
 #from DobotMovement import Dobot
 
 class TicTacToeGame:
-    def __init__(self, Player1, Player2, boardSize):
+    def __init__(self, Player1, Player2, boardSize, nr=0):
         """
         
 
@@ -22,8 +26,11 @@ class TicTacToeGame:
         None.
 
         """
-        #uncommment when use dobot code
-        #self.Dobot = Dobot()
+        self.gameNumber = nr
+        self.moveNumber = 0
+        self.Log = []
+        self.result = None
+        
         self._run_flag = False
         self.empty = BoardState.Empty
         self.P1sign = BoardState.Blue  # (1)
@@ -49,6 +56,8 @@ class TicTacToeGame:
             playerGlobal=HumanPlayer(playerSign,self)
         elif playerType=="computer":
             playerGlobal=ComputerPlayer(playerSign,self)
+        else:
+            playerGlobal=HumanPlayer(playerSign,self)
         return playerGlobal
       
     def DobotCleanBoard(self, board):
@@ -66,7 +75,7 @@ class TicTacToeGame:
 
         """
         matrix = board.copy()
-        print("Cleaning board...")
+        logger.debug("Cleaning board...")
         occupied= (np.where(abs(matrix) >self.empty))
         occupied = np.asarray(occupied).T
         return occupied
@@ -84,13 +93,13 @@ class TicTacToeGame:
 
     def boardOccupied(self, board):
         if np.all(board==self.empty):
-            print("Board: empty")
+            logger.debug("Board: empty")
             return False
         else:
             return True
         
     def isBoardFull(self):
-        print("Checking if board is full...")
+        logger.debug("Checking if board is full...")
         if np.any(self.Board==self.empty):
             return False
         else:
@@ -115,27 +124,27 @@ class TicTacToeGame:
                     row[i] = self.empty
             rows.append(row)
         board = np.array(rows)
-        print("Manualy entered board:\n", board)
+        logger.debug("Manualy entered board:\n" + str(board))
         return board
 
         
     def isWinner(self):
-        print("Checking for the winner...")
+        logger.debug("Checking for the winner...")
         status = False
         m = self.Board
         diag = m.diagonal()
         diagFlip = np.fliplr(m).diagonal()
-        #first check the diagonal if any win
+        ## first check the diagonal if any win
         for playerSign in [self.P1sign, self.P2sign]:
             if (np.all(diag==playerSign) or np.all(diagFlip==playerSign)):
                 status = True
-            #then check all the rows and columns
+            ## then check all the rows and columns
             else:
                 
                 for i in range(self.boardSize):
                     col = m[i]
                     row = m[:,i]
-                    #if all signs in the row/col are the same =win
+                    ## if all signs in the row/col are the same =win
                     if (np.all(col==playerSign) or np.all(row==playerSign)):
                         status = True
         return status
@@ -171,24 +180,25 @@ class TicTacToeGame:
     def _printWarningMessage(self, msg):
         self.printWarningMessage(msg)
     def printWarningMessage(self, msg):
-        print("Game Warning: ", msg)
+        if msg:
+            logger.info("Game Warning: " + str(msg))
 
     def _printGameWinner(self):
         self.printGameWinner(self.playerturn+1)
     def printGameWinner(self, playernumber):
-        print("WON!!!: player", playernumber,
-              self.currenPlayer.__class__.__name__)
+        logger.info("WON!!!: player" + str(playernumber) +
+              str(self.currenPlayer.__class__.__name__))
         
     def _printGameTie(self):
         self.printGameTie()
     def printGameTie(self):
-        print("Game result is a tie.")
+        logger.info("Game result is a tie.")
 
     def _printGameTurn(self):
         self.printGameTurn(self.playerturn+1)
     def printGameTurn(self, playernumber):
-        print("It's player",playernumber,"turn",
-              self.currenPlayer.__class__.__name__)
+        logger.info("It's player"+ str(playernumber) + 'turn' +
+              str(self.currenPlayer.__class__.__name__))
         
     def _printBoardState(self, board):
         self.printBoardState(board)
@@ -216,7 +226,7 @@ class TicTacToeGame:
             result += S
         result += '\n'
         result += '-' * (self.boardSize*3 + 2)
-        print (result)
+        logger.info (str(result))
         
 
     def changePlayer(self):
@@ -244,9 +254,6 @@ class TicTacToeGame:
         if np.array_equal(self.Board, newboard):
             return None
         else:
-            print("Is move allowed?")
-            print("\n new board\n", newboard)
-                    
             ## mask of Board state
             maskB = np.isin(self.Board, self.empty)
             ## set all old moves in NewBoard to Empty
@@ -257,23 +264,30 @@ class TicTacToeGame:
             mcnt = np.count_nonzero(newB != self.empty)
             
             if mcnt == 1:
-                print("One move made")
+                logger.debug("One move made")
                 if pc == 1:
-                    print("Current player made the move. OK.")
+                    logger.debug("Current player made the move. OK.")
+                    lastOkmove = np.argwhere(newB == self.currenPlayer.playerSign)
+                    lastOkmove += 1 # model / human readable
+                    self.Log.append(*(lastOkmove.tolist()))
                     return True
                 else:
-                    print("NOT current player made the move.")
+                    logger.info("NOT current player made the move.")
                     return False
             else:
-                print("Not the only one move made")
+                logger.info("Not the only one move made")
                 return False
          
 
     def requestAndCheckMove(self):
         while (self._run_flag==True):
             time.sleep(1)   ## hang-up protection
-            boardnew = self.currenPlayer.getNextMove(self.Board)
-            ##print("Player's getNextMove return:\n", boardnew)
+            newmove = self.currenPlayer.getNextMove(self.Board)
+            if (isinstance(newmove, tuple)):
+                boardnew = self.Board.copy()
+                boardnew[newmove[0], newmove[1]] = self.currenPlayer.playerSign
+            else:
+                boardnew = newmove
             lastpr = self.isLastBoardStatePresent(boardnew)
             if (lastpr == True):
                 self.cheatingCounter = 0
@@ -281,19 +295,22 @@ class TicTacToeGame:
                 ## Cups from last accepted board absent: not detected or cheated
                 self.cheatingCounter += 1
                 ## TODO:check cheating treashold
-                print("\rPrevious state changed. Not-detected or cheated?", end='')
+                logger.info("Previous state changed. Not-detected or cheated?")
                 ## continue waiting correct move
                 continue
             allowed = self.isMoveAllowed(boardnew)
             if allowed:
                 self.Board = boardnew
+                self.GameMoveAccepted()
                 return True
             elif allowed == False:
-                print("move not allowed" , )
+                logger.info("move not allowed" , )
                 self._printWarningMessage("Last move is wrong!")
+                self.GameMoveRejected()
                 continue
             else:
-                print("\rmake the move!!!" + ' '*15, end='')
+                logger.info("make the move!!!" + ' '*15)
+                self._printWarningMessage("")
                 continue
         ## in case of interrupting of game
         return None
@@ -302,20 +319,20 @@ class TicTacToeGame:
 
     def startGame(self):
         self._run_flag = True
+        self.result = None
         
         ## clear the board
         while (True and self._run_flag == True):
             time.sleep(5)   ## hang-up protection
             #### call the initial state of the board ####
-            self.boardState = self.getBoardState()
-            self._printBoardState(self.boardState)
+            board = self.getBoardState()
+            self._printBoardState(board)
             
-            if self.boardOccupied(self.boardState):
+            if self.boardOccupied(board):
                 self._printWarningMessage("Please, clear the board!")
-                print("Board occupied")
-                #self.DobotCleanBoard(self.boardState)
+                #self.DobotCleanBoard(board)
             else:
-                self.Board = self.boardState
+                self.Board = board
                 break
         print("================= GAME STARTED =================")
         
@@ -327,52 +344,65 @@ class TicTacToeGame:
             full = self.isBoardFull()
             win = self.isWinner()
             if full:
-                print("Board is full")
+                logger.debug("Board is full")
                 if win:
                     self.GameWin()
                 else:
                     self.GameTie()
                 break
             elif not(full):
-                print("Board: NOT full")
+                logger.debug("Board: NOT full")
                 if win:
                     self.GameWin()
                     break
-            print("-------------- next turn --------------")
+            logger.debug("-------------- next turn --------------")
             self.changePlayer()
             self._printGameTurn()
             self._printBoardState(self.Board)
             checkresult = self.requestAndCheckMove()
             if (checkresult == True):
-                print("Move allowed")
+                logger.debug("Move allowed")
                 self.currenPlayer.MoveApproved()
                 continue # game
             elif (checkresult == False):
-                print("cheating detected")
+                logger.debug("cheating detected")
                 break
             else:
-                print("CheckMove: interrupted.")
+                logger.debug("CheckMove: interrupted.")
                 break
         ## end of game-turn while cycle
         ## check game is canceled and finish game!
         if ( self._run_flag == False):
-            print("Game was canceled")
+            logger.info("Game was canceled")
             self._printWarningMessage("Game canceled")
+            pass
+        self._printBoardState(self.Board)
         self.gameOver()
+        return self.result
 
+    def GameMoveAccepted(self):
+        self.moveNumber += 1
+        self.currenPlayer.MoveApproved()
+        pass
 
+    def GameMoveRejected(self):
+        ### self.currenPlayer.MoveRejected()
+        pass
 
     def GameWin(self):        
         self._printGameWinner()
         self.oppositePlayer.Loser()
         self.currenPlayer.Winner()
+        self.result = self.playerturn+1
 
     def GameTie(self):        
         self._printGameTie()
+        self.result = 0
 
     def gameOver(self):
         self.P1.endOfGame()
         self.P2.endOfGame()
+        pass
         
 
 ##################### START GAME #####################

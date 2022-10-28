@@ -8,6 +8,7 @@ Created on Wed Oct  5 10:02:55 2022
 import sys, os, time
 import numpy as np
 from enum import Enum
+import logging
 ## GUI
 from PyQt6 import QtGui, QtWidgets, QtGui, QtCore, uic
 ## model, detection, video
@@ -22,6 +23,13 @@ from AppCommon import VideoMode, BoardState
 from TTTgame import TicTacToeGame
 import TTTplayer
 
+logging.basicConfig(filename='App-running.log', filemode='w', 
+                    encoding='utf-8', level=logging.ERROR)
+logger = logging.getLogger("AppTicTacToe")
+logger.setLevel(logging.DEBUG)
+logger.debug('*' * 80)
+logger.debug('*' * 80)
+logger.debug('*' * 80)
 
 
 class Signals(QtCore.QObject):
@@ -30,6 +38,7 @@ class Signals(QtCore.QObject):
     signal_game_status = QtCore.pyqtSignal(str)
     signal_game_p1_status = QtCore.pyqtSignal(str)
     signal_game_p2_status = QtCore.pyqtSignal(str)
+    signal_game_board = QtCore.pyqtSignal(np.ndarray) ## Approved board
     
     signal_change_pixmap = QtCore.pyqtSignal(np.ndarray)
     signal_detection_matrix = QtCore.pyqtSignal(np.ndarray)
@@ -86,10 +95,7 @@ class DeltaQueue(object):
         if (self.currN < self.N):
             self.currN += 1
         self._last = self.Samples[-self.currN]
-        # else:
-            # self._last = self.Samples[-self.N]
         self._integral = self._integral + (self._val + self._last) / 2.0 * self.currN
-        # print "ADD", element, "  to Samples",  self.Samples
 
     def Equal(self):
         E = []
@@ -110,7 +116,7 @@ class DeltaQueue(object):
 class GameThread(QtCore.QThread):
     def __init__(self):
         super().__init__()
-        print("GAME: thread __init__")
+        logger.debug("GAME: thread __init__")
         self.signals = AppSignals
         self.gameSize = 3
         self.p1type = "dobot"
@@ -122,7 +128,6 @@ class GameThread(QtCore.QThread):
         
     @QtCore.pyqtSlot(np.ndarray)
     def update_detected_boardT(self, GB):
-#        print("====> Got board update TREAD!")
         ## TODO: Now receive signal here.. expected, that GameGUI receive it
         if self.game != None:
             self.game.update_detected_board(GB)
@@ -153,9 +158,9 @@ class GameThread(QtCore.QThread):
         p1t = self.p1type
         p2t = self.p2type
         
-        print("APP: players type:")
-        print("Player1 = ",p1t)
-        print("Player2 = ",p2t)
+        logger.debug("APP: players type:")
+        logger.debug("Player1 = " + str(p1t))
+        logger.debug("Player2 = " + str(p2t))
         if (p1t == "dobot"):
             Player1 = "computer"
         else:
@@ -166,9 +171,9 @@ class GameThread(QtCore.QThread):
         else:
             Player2 = "human"
             
-        print("GAME: passed players type:")
-        print("Player1 = ",Player1)
-        print("Player2 = ",Player2)
+        logger.debug("GAME: passed players type:")
+        logger.debug("Player1 = " + str(Player1))
+        logger.debug("Player2 = " + str(Player2))
         ## ***
         ## Create Players and Game and run actual game
         self.game = GameGUI(self, Player1, Player2, self.gameSize)
@@ -190,8 +195,6 @@ class GameGUI(TicTacToeGame , ):
         self.signals = AppSignals
         self.lastBoardState = np.empty(shape=[size, size], )
         self.lastBoardState.fill(BoardState.Red)
-        print("GAMEGUI:")
-        print(self.lastBoardState)
 
     def stopGame(self):
         self._run_flag = False
@@ -213,7 +216,10 @@ class GameGUI(TicTacToeGame , ):
     
     def printWarningMessage(self, msg):
         super().printWarningMessage(msg)
-        self.signals.signal_game_status.emit("WARN: " + msg)
+        if msg:
+            self.signals.signal_game_status.emit("WARN: " + msg)
+        else:
+            self.signals.signal_game_status.emit("")
 
     def printGameWinner(self, playernumber):
         super().printGameWinner(playernumber)
@@ -243,6 +249,7 @@ class GameGUI(TicTacToeGame , ):
 
     def printBoardState(self, board):
         super().printBoardState(board)
+        self.signals.signal_game_board.emit(board)
         
         
 
@@ -294,14 +301,14 @@ class VideoThread(QtCore.QThread):
     
     @QtCore.pyqtSlot(int)
     def slot_change_video_port(self, newport):
-        print("setVideoPort: port=", newport)
+        logger.info("setVideoPort: port=" + str(newport))
         self.videoPort = newport
         self.flag_disconnect_video = True
         pass
     
     @QtCore.pyqtSlot(VideoMode)
     def slot_change_video_mode(self, mode):
-        print("slot_change_video_mode: mode=", mode)
+        logger.info("Changing video mode: mode=" + str(mode))
         self.mode = mode
         pass
     
@@ -318,7 +325,7 @@ class VideoThread(QtCore.QThread):
         while self._run_flag:
             image_show = self.generateImage("No video device "+str(self.videoPort))
             if ((self.camera is None) or (not self.camera.isOpened()) or self.flag_disconnect_video == True):
-                print ('Warning: unable to open video source: ', self.videoPort)
+                logger.info ('Warning: unable to open video source: ' + str(self.videoPort))
                 try:
                     self.camera.release()
                 except: pass
@@ -330,7 +337,7 @@ class VideoThread(QtCore.QThread):
                 ret, image_camera = self.camera.read()
                 if ret:
                     if self.isImageEmpty(image_camera):
-                        print("Empty image!!!!!!!!!!!!!!!")
+                        logger.debug("Empty image!!!!!!!!!!!!!!!")
                         self.flag_disconnect_video = True
                 else:
                     self.flag_disconnect_video = True
@@ -469,7 +476,7 @@ class VideoThread(QtCore.QThread):
         ## size of boxes for cups center detection
         FILL = 0.7 
         ## detections threshold for classes (hand, cups, dobot,...)
-        DETECTION_THRESHOLD = 0.9
+        DETECTION_THRESHOLD = 0.85
         def define_fit_boxes():
             BX = []
             H,W,_ = board_image.shape
@@ -575,7 +582,6 @@ class VideoThread(QtCore.QThread):
         draw_detected_centers()
         GB = getDetectionCupsArray()
         self.GBset.add(GB)
-        ###print(GB)
         if self.GBset.Equal():
             self.signals.signal_detection_matrix.emit(GB)
         
@@ -625,13 +631,13 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             self.show()
     
         def btn_human_selected(self):
-            print("settings Function call:" + "btn_human_selected")
+            logger.debug("settings Function call:" + "btn_human_selected")
             self.selection = "user"
             self.accept()
             pass
         
         def btn_computer_selected(self):
-            print("settings Function call:" + "btn_computer_selected")
+            logger.debug("settings Function call:" + "btn_computer_selected")
             self.selection = "dobot"
             self.accept()
             pass
@@ -679,7 +685,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.threadVideo = VideoThread(0)
         ## connect its signal to the update_image slot
         self.signals.signal_change_pixmap.connect(self.update_image)
-        self.signals.signal_detection_matrix.connect(self.update_game_buttons)
+        self.signals.signal_detection_matrix.connect(self.update_game_buttons_detection)
         
         icon = self.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MediaPlay)
         self.btnGameControl.setIcon(icon)
@@ -693,6 +699,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.signals.signal_game_status.connect(self.update_game_status)
         self.signals.signal_game_p1_status.connect(self.update_game_p1_status)
         self.signals.signal_game_p2_status.connect(self.update_game_p2_status)
+        self.signals.signal_game_board.connect(self.update_game_buttons_board)
         ## ***
         ## start the threads: Video and Game
         self.threadVideo.start()
@@ -714,33 +721,33 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         self.setPlayerPic(2, val)
 
     def closeEvent(self, event):
-        print("Close event received.")
+        logger.info("Close event received.")
         self.threadGame.stop()
         self.threadVideo.stop()
         event.accept()
 
     def btn_player1_clicked(self):
-        print("Player1 button clicked.")
+        logger.debug("Player1 button clicked.")
         dialog = self.selectPlayerUI(self, 1)   # player number 1
         dialog.exec()
-        print("Exit player selection dialog")
+        logger.debug("Exit player selection dialog")
         if dialog.selection != None:
             self.Player1Type = dialog.selection
         pass
 
     def btn_player2_clicked(self):
-        print("Player2 button clicked.")
+        logger.debug("Player2 button clicked.")
         dialog = self.selectPlayerUI(self, 2)   # player number 2
         dialog.exec()
-        print("Exit player selection dialog")
+        logger.debug("Exit player selection dialog")
         if dialog.selection != None:
             self.Player2Type = dialog.selection
         pass
 
     def btn_game_control_clicked(self):
-        print("GameControl button clicked.")
+        logger.debug("GameControl button clicked.")
         if self.threadGame.isRunning():
-            print(" Game THREAD is already runned. Should we stop game?")
+            logger.debug(" Game THREAD is already runned. Should we stop game?")
             reply = QtWidgets.QMessageBox()
             reply.setText("Are you sure to stop game?")
             reply.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Yes |
@@ -754,12 +761,12 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             pass
             return
         else: # game is not running
-            print("Running Game THREAD...")
+            logger.debug("Running Game THREAD...")
             ## set game parameters
             ## TODO: send signal instead of call method (???)
             self.threadGame.setGameParameters(self.Player1Type, self.Player2Type, self.GameSize)
             self.threadGame.start()
-            print("Game THREAD started.")
+            logger.debug("Game THREAD started.")
         pass
 
     def setPlayerPic(self, playernum, icon):
@@ -781,7 +788,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
         
     def btn_game_pressed(self, ):
         btn = self.sender()
-        print("GameButton pressed.", 'r=', btn.row, 'c=', btn.col)
+        logger.info("GameButton pressed." + 'r=' + str(btn.row) + 'c=' + str(btn.col))
 #        self.setGameButtonIcon(btn, "red")
         pass
 
@@ -840,12 +847,27 @@ class AppTicTacToe(QtWidgets.QMainWindow):
                 
 
     @QtCore.pyqtSlot(np.ndarray)
-    def update_game_buttons(self, GB):
+    def update_game_buttons_detection(self, GB):
         """Updates the images of game buttons"""
+        ## TODO: BoardState
         color_map = {-1 : "red", 0 : "empty", 1 : "blue" }
         for i in reversed(range(self.gameLayout.count())): 
             btn = self.gameLayout.itemAt(i).widget()
             self.setGameButtonIcon(btn, color_map[ int(GB[btn.row, btn.col]) ])
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_game_buttons_board(self, GB):
+        """Updates the images of game buttons"""
+        ## TODO: BoardState
+        color_map = {-1 : "(255,128,128,128)", 0 : None, 1 : "(128,128,255,128)" }
+        for i in reversed(range(self.gameLayout.count())): 
+            btn = self.gameLayout.itemAt(i).widget()
+            color = color_map[ int(GB[btn.row, btn.col]) ]
+            if color != None:
+                style = "background-color:rgba" + color + ";"
+            else:
+                style = ""
+            btn.setStyleSheet(style)
 
 
     @QtCore.pyqtSlot(np.ndarray)
