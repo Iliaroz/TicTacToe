@@ -200,8 +200,8 @@ class TicTacToeGame:
     def _printGameWinner(self):
         self.printGameWinner(self.playerturn+1)
     def printGameWinner(self, playernumber):
-        logger.info("WON!!!: player" + str(playernumber) +
-              str(self.currenPlayer.__class__.__name__))
+        logger.info(" -~+= WON =+~- : Player " + str(playernumber) + ' ' +
+              str(self.currenPlayer.__class__.__name__) + ' won the game!')
         
     def _printGameTie(self):
         self.printGameTie()
@@ -211,7 +211,7 @@ class TicTacToeGame:
     def _printGameTurn(self):
         self.printGameTurn(self.playerturn+1)
     def printGameTurn(self, playernumber):
-        logger.info("It's player"+ str(playernumber) + 'turn' +
+        logger.info("Player  "+ str(playernumber) + '  turn: ' +
               str(self.currenPlayer.__class__.__name__))
         
     def _printBoardState(self, board):
@@ -224,7 +224,7 @@ class TicTacToeGame:
         ----------
         board : 2D array.
         """
-        result = '-' * (self.boardSize*3 + 2)
+        result = "\n" + '-' * (self.boardSize*3 + 2)
         for row in range(self.boardSize):
             r = board[row].tolist()
             S = "|"
@@ -433,14 +433,14 @@ class TicTacToeGame:
         pass
 
     def GameWin(self):        
+        self.result = self.playerturn+1
         self._printGameWinner()
         self.oppositePlayer.Loser()
         self.currenPlayer.Winner()
-        self.result = self.playerturn+1
 
     def GameTie(self):        
-        self._printGameTie()
         self.result = 0
+        self._printGameTie()
 
     def gameOver(self):
         self.P1.endOfGame()

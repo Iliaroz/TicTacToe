@@ -10,6 +10,8 @@ from AppCommon import VideoMode, BoardState
 from DobotClass import Dobot
 import tensorflow as tf
 import logging
+tf.autograph.set_verbosity(0)
+
 logger = logging.getLogger("AppTicTacToe")
 
 
@@ -86,12 +88,13 @@ class ComputerPlayer(Player):
         Player.__init__(**locals())
         self.MODEL_FILE = 'model-'+str(self.game.boardSize)+'.h5'
         self.MODEL_LOCAL = 'local-model-'+str(self.game.boardSize)+'.h5'
-        self.randomMoves = 3
+        self.randomMoves = 2
         self.offeredMove = None # last move passed to Game
         try:
             self.predict_model = tf.keras.models.load_model(self.MODEL_LOCAL)
         except:
             self.predict_model = tf.keras.models.load_model(self.MODEL_FILE)
+            logger.error("Local Model loading failed, fallback to pretrained model.")
         try:
             self.dobot = Dobot(sign)
             self.dobot.connect()
@@ -137,10 +140,7 @@ class ComputerPlayer(Player):
         possibleMoves = np.argwhere(matrix == self.empty)
         logger.debug("Poss moves:\n" + str(possibleMoves))
         
-        if self.game.moveNumber in range(self.randomMoves):
-            move = self.selectRandom(possibleMoves)
-            return tuple(move)
-
+        ## CHECK for WIN / LOSE positions
         for player in [self.game.currenPlayer.playerSign, self.game.oppositePlayer.playerSign]:
             for k in range(len(possibleMoves)):
                 boardCopy = matrix.copy()
@@ -151,12 +151,18 @@ class ComputerPlayer(Player):
                 
                 boardCopy[i,j] = player
                 if self.isWinner(boardCopy, player):
-                    self.move = move
-                    matrix[self.move[0]][self.move[1]] = self.playerSign
-                    self.offeredMove = self.move
+                    matrix[move[0]][move[1]] = self.playerSign
+                    self.offeredMove = move
                     return matrix
                 else:
                     pass
+
+        ## Random moves, if needed
+        if self.game.moveNumber in range(self.randomMoves):
+            logger.info("Computer player  "+ str(self.game.playerturn + 1) + '  made random move.')
+            move = self.selectRandom(possibleMoves)
+            self.offeredMove = move
+            return tuple(move)
         
         ## Model prediction
         try:
@@ -183,6 +189,7 @@ class ComputerPlayer(Player):
             move = possibleMoves[mi]
         except:
             move = self.selectRandom(possibleMoves)
+        self.offeredMove = move
         return (tuple(move))
 
 
@@ -227,9 +234,16 @@ class ComputerPlayer(Player):
             logger.debug("Training data\n" + str(npSteps))
             logger.debug("Training results\n" + str(npRes))
             try:
-                self.predict_model.fit(npSteps, npRes, epochs=1)
-                self.predict_model.save(self.MODEL_LOCAL)
+                hist = self.predict_model.fit(npSteps, npRes, epochs=1)
             except:
-                logger.error("Training fail!")
-            pass
+                logger.error("Training failed!")
+                return False
+            try:
+                acc = float(hist.history['accuracy'][0])
+                self.predict_model.save(self.MODEL_LOCAL)
+                logger.info("Retrained model was saved, accuracy is "+str(acc))
+            except:
+                logger.error("Retrained model saving failed!")
+        pass
+
 
