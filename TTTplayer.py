@@ -195,7 +195,7 @@ class ComputerPlayer(Player):
 
     
     def MoveApproved(self):
-        if self.offeredMove != None:
+        if self.offeredMove is not None:
             try:
                 self.dobot.PlaceCupToBoard(self.offeredMove)
             except:

@@ -300,7 +300,7 @@ class TicTacToeGame:
 
         Returns
         -------
-        bool
+            bool
             True -- finaly the move is accepted.
             None -- in case the Game was interrupted
             False -- never. TODO: return False if cheating detected
@@ -322,6 +322,8 @@ class TicTacToeGame:
                 self.cheatingCounter += 1
                 ## TODO:check cheating treashold
                 logger.info("Previous state changed. Not-detected or cheated?")
+                if self.cheatingCounter > 12:
+                    self._printWarningMessage("Board state is changed!")
                 ## continue waiting correct move
                 continue
             allowed = self.isMoveAllowed(boardnew)
