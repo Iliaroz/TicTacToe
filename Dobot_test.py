@@ -80,14 +80,14 @@ class Dobot():
         self.BoardCS = CoordinateSystem()
         if (playerSign == 1):
             ## BLUE / LEFT side
-            self.CupStorageCS.setRotatedCS([-69.0, -169.0], [69.0, -170.0])
+            self.CupStorageCS.setRotatedCS([-67.2,-172.0], [69.4,-172.0])
             self.HomePos = [0, -200]
-            self.BoardCS.setRotatedCS([202.0,36.0], [270.0, 35.5])
+            self.BoardCS.setRotatedCS([208.7,30.8], [275.4, 30.3])
         else:
             ## RED / RIGHT side
-            self.CupStorageCS.setRotatedCS([-59,  169], [72,  164])
+            self.CupStorageCS.setRotatedCS([-66,171.7], [67.5,171.4])
             # *** fix it!
-            self.BoardCS.setRotatedCS([268.5, -46], [200.5,-44.5])
+            self.BoardCS.setRotatedCS([274.5, -37.7], [206.8,-36.7])
             self.HomePos = [0, 200]
         self.gap = 134/4
         self.CupHeight = 25
@@ -395,3 +395,20 @@ class Dobot():
 #####################################################
 #####################################################
 #####################################################
+
+
+
+if __name__=="__main__":
+    import time
+
+    dobot = Dobot(-1)    ## 1 = blue; -1 = red
+    dobot.connect()
+    dobot.HomeCalibration()
+
+    for _ in range (10000):
+        p = dobot.GetPosition();
+        print(f"Position:, x={p[0]},  y = {p[1]} ")
+        dobot.printpos()
+        time.sleep(2)
+    dobot.close()
+    
