@@ -10,7 +10,7 @@ import numpy as np
 from enum import Enum
 import logging
 ## GUI
-from PyQt6 import QtGui, QtWidgets, QtGui, QtCore, uic
+from PyQt6 import QtGui, QtWidgets, QtCore, uic
 ## model, detection, video
 import cv2
 import tensorflow as tf
@@ -18,6 +18,7 @@ from object_detection.utils import label_map_util
 from object_detection.utils import config_util
 from object_detection.utils import visualization_utils
 from object_detection.builders import model_builder
+## App libraries and parts:
 ## Game, Player, etc..
 from AppCommon import VideoMode, BoardState
 from TTTgame import TicTacToeGame
@@ -33,6 +34,8 @@ logger.debug('*' * 80)
 
 
 class Signals(QtCore.QObject):
+    """ Signals (Qt signals) used in whole application
+    """
     signal_game_started = QtCore.pyqtSignal()
     signal_game_stopped = QtCore.pyqtSignal()
     signal_game_status = QtCore.pyqtSignal(str)
@@ -857,6 +860,7 @@ class AppTicTacToe(QtWidgets.QMainWindow):
             act.modeToSwitch = mode
             Acts.append(act)
         contextMenu.addActions(Acts)
+        
         contextMenu.addSeparator()
         Acts = []
         for i in range(4):
@@ -946,7 +950,13 @@ class AppTicTacToe(QtWidgets.QMainWindow):
 
     
 ###########################################################
+###########################################################
+###########################################################
+###########################################################
 ### Running App
+###########################################################
+###########################################################
+###########################################################
 ###########################################################
     
 if __name__=="__main__":

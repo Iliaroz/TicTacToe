@@ -189,6 +189,7 @@ class ComputerPlayer(Player):
             move = possibleMoves[mi]
         except:
             move = self.selectRandom(possibleMoves)
+            logger.debug("Computer player  "+ str(self.game.playerturn + 1) + ' : Model prediction failed!')
         self.offeredMove = move
         return (tuple(move))
 

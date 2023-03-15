@@ -75,7 +75,7 @@ class TicTacToeGame:
         """
         matrix = board.copy()
         logger.debug("Cleaning board...")
-        occupied= (np.where(abs(matrix) >self.empty))
+        occupied= (np.where(abs(matrix) > self.empty))
         occupied = np.asarray(occupied).T
         return occupied
     
